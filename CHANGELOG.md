@@ -12,8 +12,31 @@ Las versiones 1.0.0 a 3.0.0 se desarrollaron fuera de Git (octubre y noviembre d
 ## [Sin publicar]
 
 ### Planeado
-- **4.0.0:** reestructuración en un paquete multitecnología (`energias/`), con módulos comunes (economía, unidades, gráficas), pruebas automáticas con `pytest` e interfaz Streamlit multipágina.
-- **4.1.0:** módulo de energías del mar con la central mareomotriz (energía potencial anual y LCOE con escenarios de sensibilidad).
+- **4.1.0:** módulo de energías del mar con la central mareomotriz (energía potencial anual y LCOE con escenarios de sensibilidad) y módulo común de economía (`energias/comun/economia.py`).
+
+## [4.0.0]: reestructuración multitecnología
+
+Cambia la estructura y la forma de instalar y ejecutar el aplicativo. Los resultados numéricos son idénticos a los de la 3.0.0.
+
+### Añadido
+- **Paquete instalable** `energias/` con `pyproject.toml` (`python -m pip install -e .`), que también configura `pytest`.
+- **Módulos comunes** en `energias/comun/`:
+  - `unidades.py` (`Unidades`): factores W/kW/MW/GW y Wh/kWh/MWh/GWh, conversión entre unidades de energía y J↔Wh.
+  - `graficos.py` (`Graficos`): guardado de figuras en png y svg, conversión a bytes y formatos de eje.
+- **Consola:** `scripts/ejecutarHidraulica.py`, con los parámetros editables que antes estaban al final de `analisisCaudalDiseno.py`.
+- **Interfaz multipágina:** `interfaz/app.py` es la página de inicio (descripción de la plataforma y tecnologías disponibles) e `interfaz/pages/1_Hidraulica.py` contiene la interfaz de la hidráulica con sus tres pestañas.
+- **Pruebas automáticas** con `pytest` en `tests/`:
+  - regresión de la hidráulica con los valores de referencia de la 3.0.0 (dos casos del módulo 1, canal, tubería forzada y Colebrook);
+  - módulos comunes;
+  - pruebas de humo de cada página con `streamlit.testing.v1.AppTest`.
+- Nueva dependencia: `pytest`.
+
+### Cambiado
+- Los módulos de cálculo pasan de `scripts/` a `energias/hidraulica/` (con `git mv`, conservando su historial) y usan imports absolutos.
+- `Graficador` usa `energias.comun.graficos` para guardar, convertir a bytes y dar formato a los ejes; `CalculadoraPotencia` toma los factores de `energias.comun.unidades`.
+- Los datos pasan a `data/hidraulica/` y las salidas a `outputs/hidraulica/`, que se crea al guardar.
+- Las claves de `st.session_state` y de los widgets de la página de la hidráulica llevan el prefijo `hidraulica_`.
+- `README.md` y `CLAUDE.md` describen la nueva instalación y ejecución.
 
 ## [3.0.0]: canal de derivación y tubería forzada
 

@@ -72,6 +72,7 @@ class CalculadoraPotencia:
         self.unidadEnergia = unidadEnergia
         self.factorUnidad = self.factoresUnidad[unidadEnergia]
         self.nombreColumnaEnergia = f"EnergiaAnual_{unidadEnergia}h"
+        self.nombreColumnaEnergiaDiaria = f"EnergiaDiaria_{unidadEnergia}h"
 
     @staticmethod
     def normalizarTexto(texto: str) -> str:
@@ -119,6 +120,15 @@ class CalculadoraPotencia:
                 ).alias("Potencia")
             )
             .with_columns((pl.col("Potencia") * self.horasPorDia).alias("EnergiaDiaria"))
+        )
+
+    def calcularEnergiaDiariaEnUnidad(self, dfCaudales: pl.DataFrame, caudalEquipamiento: float) -> pl.DataFrame:
+        """Energía generada cada día (unidad elegida, h/día) para un Qe dado."""
+        return self.calcularPotenciaDiaria(dfCaudales, caudalEquipamiento).select(
+            "NumDia",
+            "CaudalClasificadoPromedio",
+            "CaudalUtilizado",
+            (pl.col("EnergiaDiaria") * self.factorUnidad).alias(self.nombreColumnaEnergiaDiaria),
         )
 
     def calcularEnergiaAnual(self, dfCaudales: pl.DataFrame, caudalEquipamiento: float) -> float:

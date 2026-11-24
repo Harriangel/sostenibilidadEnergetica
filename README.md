@@ -6,11 +6,12 @@ Programa en Python que analiza la serie histórica de caudales medios diarios de
 
 ```
 analisisCaudal/
-├── .venv/            Entorno virtual (polars, matplotlib, numpy)
+├── .venv/            Entorno virtual (polars, matplotlib, numpy, streamlit)
 ├── data/             Archivos de entrada en .csv (descargaDhime.csv)
 ├── outputs/          Resultados en .csv, .svg y .png
 ├── scripts/
 │   ├── analisisCaudalDiseno.py   Clase principal AnalisisCaudalDiseno (se ejecuta al final)
+│   ├── interfazStreamlit.py      Interfaz web (clase InterfazStreamlit)
 │   ├── lectorDatos.py            Clase LectorDatos
 │   ├── procesadorCaudales.py     Clase ProcesadorCaudales
 │   ├── calculadoraPotencia.py    Clase CalculadoraPotencia
@@ -30,6 +31,18 @@ python scripts\analisisCaudalDiseno.py
 ```
 
 Los archivos de datos se colocan en `data/`. Se elige la fuente con el parámetro `fuente` (ver "Parámetros").
+
+### Interfaz web (Streamlit)
+
+Con el entorno virtual activado y desde la carpeta raíz del proyecto:
+
+```
+python -m streamlit run scripts\interfazStreamlit.py
+```
+
+Se abre el navegador en `http://localhost:8501`. La primera vez Streamlit puede pedir un correo en la consola; se puede dejar vacío y pulsar Enter. Para cerrar la interfaz, `Ctrl + C` en la consola.
+
+En la barra lateral (módulo 1) se elige la fuente (IDEAM o CONAGUA), el archivo (de la carpeta `data` o subiendo uno) y los parámetros del cálculo; el botón **Calcular** muestra las métricas principales, las tres gráficas y las tablas. Cada gráfica y tabla tiene su botón de descarga (PNG, SVG o CSV), y el botón **Guardar resultados en la carpeta outputs** exporta todo igual que la ejecución por consola.
 
 ## Fuentes de datos
 
@@ -56,7 +69,7 @@ El lector busca la línea del encabezado, por lo que acepta cualquier cantidad d
 8. Calcula `CaudalClasificadoPromedio`: promedio de `CaudalClasificado` de todos los periodos para cada `NumDia` (los nulos no se tienen en cuenta).
 9. Gráfica de `NumDia` vs `CaudalClasificado` con todos los periodos y la línea promedio (punteada).
 10. Exporta `NumDia` y `CaudalClasificadoPromedio`.
-11. Calcula la energía anual para cada caudal de equipamiento (ver más abajo), la grafica contra `Qe` e identifica el `Qe` de energía máxima.
+11. Calcula la energía anual para cada caudal de equipamiento (ver más abajo), la grafica contra `Qe`, identifica el `Qe` de energía máxima y grafica la energía generada cada día con ese `Qe` sobre la curva de caudal clasificado promedio.
 
 ### Consideraciones sobre los datos
 
@@ -122,5 +135,7 @@ Los archivos de salida tienen siempre el mismo nombre, por lo que una nueva ejec
 | `caudalesPorPeriodo.png` / `.svg` | Caudal diario por número de día, todos los periodos |
 | `caudalesClasificados.png` / `.svg` | Caudales clasificados por periodo y promedio |
 | `caudalClasificadoPromedio.csv` | `NumDia`, `CaudalClasificadoPromedio` |
+| `energiaDiariaClasificada.png` / `.svg` | Energía generada por día con el caudal de equipamiento óptimo |
 | `energiaAnualVsCaudalEquipamiento.png` / `.svg` | Energía anual vs caudal de equipamiento, con el máximo resaltado |
+| `energiaDiariaCaudalOptimo.csv` | `NumDia`, caudal clasificado promedio, caudal utilizado y `EnergiaDiaria_<unidad>h` con el `Qe` óptimo |
 | `energiaAnualPorCaudalEquipamiento.csv` | `CaudalEquipamiento`, `CaudalMinimoTecnico` y `EnergiaAnual_<unidad>h` |

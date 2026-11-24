@@ -19,6 +19,7 @@ class AnalisisCaudalDiseno:
         self,
         fuente: str = "IDEAM",
         nombreArchivo: str = None,
+        rutaArchivo: Path = None,
         saltoNeto: float = 10,
         tipoTurbina: str = "Kaplan",
         unidadEnergia: str = "kW",
@@ -36,7 +37,8 @@ class AnalisisCaudalDiseno:
         self.fuente = fuente.strip().upper()
         if nombreArchivo is None:
             nombreArchivo = self.archivosPorDefecto.get(self.fuente, "")
-        self.rutaDatos = self.carpetaData / nombreArchivo
+        # rutaArchivo (completa) tiene prioridad sobre nombreArchivo (dentro de 'data')
+        self.rutaDatos = Path(rutaArchivo) if rutaArchivo is not None else self.carpetaData / nombreArchivo
 
         self.lector = LectorDatos(self.rutaDatos, self.fuente)
         self.procesador = ProcesadorCaudales(minDiasPorPeriodo=minDiasPorPeriodo)
@@ -79,9 +81,9 @@ class AnalisisCaudalDiseno:
             f"{self.calculadora.unidadEnergia}h/año con Qe = {maximo['CaudalEquipamiento']:.2f} m³/s"
         )
 
-    def ejecutar(self) -> pl.DataFrame:
+    def calcular(self) -> dict:
+        """Pipeline completo sin imprimir ni guardar: devuelve los resultados."""
         # 1 y 2. Leer el archivo (según la fuente) y extraer Fecha (date) y Valor (float)
-        print(f"Fuente: {self.fuente} | archivo: {self.rutaDatos.name}")
         dfDatos = self.lector.leer()
         dfDatos = self.procesador.renombrarCaudal(dfDatos)
 
@@ -90,39 +92,78 @@ class AnalisisCaudalDiseno:
 
         # 4. Asignar los periodos anuales de octubre a septiembre (mínimo de días)
         dfDatos = self.procesador.asignarPeriodosAnuales(dfDatos)
-        self.imprimirResumenPeriodos()
 
         # 5. Numerar los días de 1 a 365 (incluye las fechas faltantes)
-        dfDatos = self.procesador.numerarDias(dfDatos)
-
-        # 6. Gráfica NumDia vs Caudal de todos los periodos
-        self.graficador.graficarCaudalesPorPeriodo(dfDatos, "caudalesPorPeriodo")
+        dfCaudales = self.procesador.numerarDias(dfDatos)
 
         # 7. Caudal clasificado de mayor a menor dentro de cada periodo
-        dfDatos = self.procesador.clasificarCaudales(dfDatos)
+        dfClasificado = self.procesador.clasificarCaudales(dfCaudales)
 
         # 8. Promedio del caudal clasificado de todos los periodos
-        dfDatos = self.procesador.calcularPromedioClasificado(dfDatos)
+        dfClasificado = self.procesador.calcularPromedioClasificado(dfClasificado)
 
-        # 9. Gráfica NumDia vs CaudalClasificado con la línea promedio
-        self.graficador.graficarCaudalesClasificados(dfDatos, "caudalesClasificados")
-
-        # 10. Exportar NumDia y CaudalClasificadoPromedio
-        dfResultado = self.procesador.construirResultado(dfDatos)
-        dfResultado.write_csv(self.carpetaSalidas / "caudalClasificadoPromedio.csv")
+        # 10. NumDia y CaudalClasificadoPromedio
+        dfPromedio = self.procesador.construirResultado(dfClasificado)
 
         # 11. Energía anual para cada caudal de equipamiento y máximo
-        dfEnergia = self.calculadora.calcularEnergiaPorCaudalEquipamiento(dfResultado)
-        dfEnergia.write_csv(self.carpetaSalidas / "energiaAnualPorCaudalEquipamiento.csv")
+        dfEnergia = self.calculadora.calcularEnergiaPorCaudalEquipamiento(dfPromedio)
+
+        # Energía de cada día para el caudal de equipamiento de energía máxima
+        maximo = self.calculadora.identificarMaximo(dfEnergia)
+        dfEnergiaDiaria = self.calculadora.calcularEnergiaDiariaEnUnidad(
+            dfPromedio, maximo["CaudalEquipamiento"]
+        )
+
+        return {
+            "dfResumenPeriodos": self.procesador.dfResumenPeriodos,
+            "dfCaudales": dfCaudales,
+            "dfClasificado": dfClasificado,
+            "dfPromedio": dfPromedio,
+            "dfEnergia": dfEnergia,
+            "dfEnergiaDiaria": dfEnergiaDiaria,
+            "maximo": maximo,
+        }
+
+    def crearFiguras(self, resultados: dict) -> dict:
+        """Pasos 6 y 9 y gráfica de energía vs Qe. Devuelve {nombreArchivo: figura}."""
+        return {
+            "caudalesPorPeriodo": self.graficador.crearFiguraCaudalesPorPeriodo(resultados["dfCaudales"]),
+            "caudalesClasificados": self.graficador.crearFiguraCaudalesClasificados(resultados["dfClasificado"]),
+            "energiaDiariaClasificada": self.graficador.crearFiguraEnergiaDiaria(
+                resultados["dfEnergiaDiaria"],
+                self.calculadora.nombreColumnaEnergiaDiaria,
+                self.calculadora.unidadEnergia,
+                resultados["maximo"]["CaudalEquipamiento"],
+            ),
+            "energiaAnualVsCaudalEquipamiento": self.graficador.crearFiguraEnergia(
+                resultados["dfEnergia"],
+                self.calculadora.nombreColumnaEnergia,
+                self.calculadora.unidadEnergia,
+            ),
+        }
+
+    def guardarResultados(self, resultados: dict, figuras: dict) -> Path:
+        """Exporta los csv y las figuras (png y svg) a la carpeta outputs."""
+        resultados["dfPromedio"].write_csv(self.carpetaSalidas / "caudalClasificadoPromedio.csv")
+        resultados["dfEnergia"].write_csv(self.carpetaSalidas / "energiaAnualPorCaudalEquipamiento.csv")
+        resultados["dfEnergiaDiaria"].write_csv(self.carpetaSalidas / "energiaDiariaCaudalOptimo.csv")
+        for nombreArchivo, fig in figuras.items():
+            self.graficador.guardarFigura(fig, nombreArchivo)
+        return self.carpetaSalidas
+
+    def ejecutar(self) -> pl.DataFrame:
+        """Ejecuta el pipeline desde la consola: calcula, imprime y guarda."""
+        print(f"Fuente: {self.fuente} | archivo: {self.rutaDatos.name}")
+        resultados = self.calcular()
+        self.imprimirResumenPeriodos()
+
+        figuras = self.crearFiguras(resultados)
+        self.guardarResultados(resultados, figuras)
+
+        dfEnergia = resultados["dfEnergia"]
         with pl.Config(tbl_rows=25):
             print(f"\nEnergía anual por caudal de equipamiento:\n{dfEnergia}")
         self.imprimirMaximo(dfEnergia)
-        self.graficador.graficarEnergiaVsCaudalEquipamiento(
-            dfEnergia,
-            self.calculadora.nombreColumnaEnergia,
-            self.calculadora.unidadEnergia,
-            "energiaAnualVsCaudalEquipamiento",
-        )
 
         print(f"\nResultados exportados en: {self.carpetaSalidas}")
         return dfEnergia

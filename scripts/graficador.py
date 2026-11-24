@@ -1,13 +1,19 @@
+from io import BytesIO
 from pathlib import Path
 
-import matplotlib.pyplot as plt
+import matplotlib
 import numpy as np
 import polars as pl
+from matplotlib.figure import Figure
 from matplotlib.ticker import FuncFormatter
 
 
 class Graficador:
-    """Genera las gráficas del análisis y las guarda en png y svg."""
+    """Crea las gráficas del análisis y las guarda en png y svg.
+
+    Las figuras se crean con la API orientada a objetos de matplotlib (Figure),
+    sin pyplot, para poder usarlas tanto en scripts como en la interfaz web.
+    """
 
     formatosSalida = ("png", "svg")
 
@@ -20,20 +26,26 @@ class Graficador:
 
     def crearColores(self, nColores: int):
         """Paleta continua para distinguir muchos periodos."""
-        return plt.cm.turbo(np.linspace(0.05, 0.95, nColores))
+        return matplotlib.colormaps["turbo"](np.linspace(0.05, 0.95, nColores))
 
-    def guardarFigura(self, fig, nombreArchivo: str) -> None:
+    def guardarFigura(self, fig: Figure, nombreArchivo: str) -> None:
         for formato in self.formatosSalida:
             fig.savefig(
                 self.carpetaSalidas / f"{nombreArchivo}.{formato}",
                 dpi=200,
                 bbox_inches="tight",
             )
-        plt.close(fig)
 
-    def graficarCaudalesPorPeriodo(self, df: pl.DataFrame, nombreArchivo: str) -> None:
+    def figuraABytes(self, fig: Figure, formato: str) -> bytes:
+        """Figura en memoria (png o svg), por ejemplo para botones de descarga."""
+        buffer = BytesIO()
+        fig.savefig(buffer, format=formato, dpi=200, bbox_inches="tight")
+        return buffer.getvalue()
+
+    def crearFiguraCaudalesPorPeriodo(self, df: pl.DataFrame) -> Figure:
         """Paso 6: NumDia vs Caudal, una línea por periodo."""
-        fig, ax = plt.subplots(figsize=(12, 6))
+        fig = Figure(figsize=(12, 6))
+        ax = fig.subplots()
 
         periodos = df["Periodo"].unique(maintain_order=True)
         colores = self.crearColores(len(periodos))
@@ -53,11 +65,12 @@ class Graficador:
         ax.set_xlim(1, 365)
         ax.grid(True, alpha=0.3)
         ax.legend(title="Periodo", loc="center left", bbox_to_anchor=(1.01, 0.5), fontsize=8, ncol=2)
-        self.guardarFigura(fig, nombreArchivo)
+        return fig
 
-    def graficarCaudalesClasificados(self, df: pl.DataFrame, nombreArchivo: str) -> None:
+    def crearFiguraCaudalesClasificados(self, df: pl.DataFrame) -> Figure:
         """Paso 9: NumDia vs CaudalClasificado por periodo, más el promedio."""
-        fig, ax = plt.subplots(figsize=(12, 6))
+        fig = Figure(figsize=(12, 6))
+        ax = fig.subplots()
 
         periodos = df["Periodo"].unique(maintain_order=True)
         colores = self.crearColores(len(periodos))
@@ -88,13 +101,12 @@ class Graficador:
         ax.set_xlim(1, 365)
         ax.grid(True, alpha=0.3)
         ax.legend(title="Periodo", loc="center left", bbox_to_anchor=(1.01, 0.5), fontsize=8, ncol=2)
-        self.guardarFigura(fig, nombreArchivo)
+        return fig
 
-    def graficarEnergiaVsCaudalEquipamiento(
-        self, df: pl.DataFrame, columnaEnergia: str, unidadEnergia: str, nombreArchivo: str
-    ) -> None:
+    def crearFiguraEnergia(self, df: pl.DataFrame, columnaEnergia: str, unidadEnergia: str) -> Figure:
         """Qe vs energía anual, resaltando el caudal de equipamiento de energía máxima."""
-        fig, ax = plt.subplots(figsize=(10, 6))
+        fig = Figure(figsize=(10, 6))
+        ax = fig.subplots()
 
         caudales = df["CaudalEquipamiento"].to_numpy()
         energias = df[columnaEnergia].to_numpy()
@@ -123,4 +135,36 @@ class Graficador:
         ax.yaxis.set_major_formatter(FuncFormatter(lambda valor, _: f"{valor:,.0f}"))
         ax.grid(True, alpha=0.3)
         ax.legend()
-        self.guardarFigura(fig, nombreArchivo)
+        return fig
+
+    def crearFiguraEnergiaDiaria(
+        self, df: pl.DataFrame, columnaEnergiaDiaria: str, unidadEnergia: str, caudalEquipamiento: float
+    ) -> Figure:
+        """NumDia vs energía generada cada día con la serie de caudal clasificado promedio."""
+        fig = Figure(figsize=(12, 6))
+        ax = fig.subplots()
+
+        dias = df["NumDia"].to_numpy()
+        energias = df[columnaEnergiaDiaria].to_numpy()
+        energiaAnual = df[columnaEnergiaDiaria].sum()
+
+        ax.fill_between(dias, energias, color="tab:green", alpha=0.25)
+        ax.plot(
+            dias,
+            energias,
+            color="tab:green",
+            linewidth=1.8,
+            label=f"Energía anual: {energiaAnual:,.0f} {unidadEnergia}h/año",
+        )
+
+        ax.set_title(
+            f"Energía generada por día con el caudal clasificado promedio (Qe = {caudalEquipamiento:.2f} m³/s)"
+        )
+        ax.set_xlabel("Número de día (posición en la clasificación)")
+        ax.set_ylabel(f"Energía diaria ({unidadEnergia}h/día)")
+        ax.yaxis.set_major_formatter(FuncFormatter(lambda valor, _: f"{valor:,.0f}"))
+        ax.set_xlim(1, 365)
+        ax.set_ylim(bottom=0)
+        ax.grid(True, alpha=0.3)
+        ax.legend()
+        return fig

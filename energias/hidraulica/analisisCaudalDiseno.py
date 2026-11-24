@@ -172,20 +172,3 @@ class AnalisisCaudalDiseno:
         print(f"\nResultados exportados en: {self.carpetaSalidas}")
         return dfEnergia
 
-
-if __name__ == "__main__":
-    # Parámetros editables
-    AnalisisCaudalDiseno(
-        fuente="CONAGUA",        # IDEAM (Colombia) o CONAGUA (México)
-        nombreArchivo=None,      # None usa el archivo por defecto de la fuente; o ej. "SAACP.csv"
-        minDiasPorPeriodo=300,   # días con dato mínimos para incluir un periodo
-        saltoNeto=150,           # metros
-        tipoTurbina="Francis",   # Pelton, Ossberger, Kaplan, Semikaplan, Francis o Hélice
-        unidadEnergia="kW",      # W, kW, MW o GW (la energía se expresa en Wh, kWh, MWh o GWh)
-        densidadAgua=1000,       # kg/m³
-        gravedad=9.8,            # m/s²
-        eficienciaTurbina=0.85,  # ηg (se ignora si se indica eficienciaTotal)
-        eficienciaGenerador=0.95,  # ηG (se ignora si se indica eficienciaTotal)
-        eficienciaTotal=0.88,    # ηg*ηG; con None se usa ηg*ηG
-        pasoQe=None,             # None: automático según el caudal máximo; o un valor en m³/s
-    ).ejecutar()

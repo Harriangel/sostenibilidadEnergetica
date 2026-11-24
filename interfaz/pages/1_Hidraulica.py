@@ -10,16 +10,22 @@ from energias.hidraulica.disenoCanal import DisenoCanal
 from energias.hidraulica.disenoTuberiaForzada import DisenoTuberiaForzada
 from energias.hidraulica.graficador import Graficador
 
-carpetaOutputs = Path(__file__).resolve().parent.parent / "outputs" / "hidraulica"
+# interfaz/pages/1_Hidraulica.py -> raíz del repositorio
+carpetaRaiz = Path(__file__).resolve().parents[2]
+carpetaOutputs = carpetaRaiz / "outputs" / "hidraulica"
 
 
 class InterfazStreamlit:
     """Interfaz web (Streamlit) para ejecutar el análisis de caudal de diseño.
 
+    Página de la hidráulica dentro de la interfaz multipágina.
     Barra lateral: fuente, archivo y parámetros. Zona central: resultados.
     Ejecución (desde la carpeta raíz del proyecto):
-        python -m streamlit run scripts/interfazStreamlit.py
+        python -m streamlit run interfaz/app.py
+    Las claves de st.session_state llevan el prefijo de la tecnología ('hidraulica_').
     """
+
+    prefijoEstado = "hidraulica_"
 
     nombresTurbinas = ["Pelton", "Ossberger", "Kaplan", "Semikaplan", "Francis", "Hélice"]
     unidadesEnergia = ["W", "kW", "MW", "GW"]
@@ -31,8 +37,13 @@ class InterfazStreamlit:
     }
 
     def __init__(self):
-        self.carpetaRaiz = Path(__file__).resolve().parent.parent
+        self.carpetaRaiz = carpetaRaiz
         self.carpetaData = self.carpetaRaiz / "data" / "hidraulica"
+
+    @classmethod
+    def clave(cls, nombre: str) -> str:
+        """Clave de st.session_state (o de un widget) con el prefijo de la tecnología."""
+        return f"{cls.prefijoEstado}{nombre}"
 
     # ------------------------------------------------------------------
     # Entradas
@@ -155,11 +166,11 @@ class InterfazStreamlit:
                     for nombre, fig in figuras.items()
                 }
         except (ValueError, FileNotFoundError, KeyError) as error:
-            st.session_state.pop("resultadosAnalisis", None)
+            st.session_state.pop(self.clave("resultadosAnalisis"), None)
             st.error(f"No se pudo completar el análisis: {error}")
             return
 
-        st.session_state["resultadosAnalisis"] = {
+        st.session_state[self.clave("resultadosAnalisis")] = {
             "analisis": analisis,
             "resultados": resultados,
             "figuras": figuras,
@@ -173,21 +184,21 @@ class InterfazStreamlit:
     def botonesDescargaFigura(self, nombre: str, bytesFiguras: dict) -> None:
         columnaPng, columnaSvg, _ = st.columns([1, 1, 4])
         columnaPng.download_button(
-            "Descargar PNG", bytesFiguras[nombre]["png"], f"{nombre}.png", "image/png", key=f"png_{nombre}"
+            "Descargar PNG", bytesFiguras[nombre]["png"], f"{nombre}.png", "image/png", key=self.clave(f"png_{nombre}")
         )
         columnaSvg.download_button(
-            "Descargar SVG", bytesFiguras[nombre]["svg"], f"{nombre}.svg", "image/svg+xml", key=f"svg_{nombre}"
+            "Descargar SVG", bytesFiguras[nombre]["svg"], f"{nombre}.svg", "image/svg+xml", key=self.clave(f"svg_{nombre}")
         )
 
     def mostrarTabla(self, titulo: str, df, nombreArchivo: str) -> None:
         st.subheader(titulo)
         st.dataframe(df)
         st.download_button(
-            "Descargar CSV", df.write_csv().encode("utf-8"), nombreArchivo, "text/csv", key=f"csv_{nombreArchivo}"
+            "Descargar CSV", df.write_csv().encode("utf-8"), nombreArchivo, "text/csv", key=self.clave(f"csv_{nombreArchivo}")
         )
 
     def mostrarResultados(self) -> None:
-        estado = st.session_state["resultadosAnalisis"]
+        estado = st.session_state[self.clave("resultadosAnalisis")]
         analisis, resultados = estado["analisis"], estado["resultados"]
         calculadora, procesador = analisis.calculadora, analisis.procesador
         nombreEnergia = calculadora.nombreColumnaEnergia
@@ -260,10 +271,10 @@ class InterfazStreamlit:
         st.image(bytesFigura["png"])
         columnaPng, columnaSvg, _ = st.columns([1, 1, 4])
         columnaPng.download_button(
-            "Descargar PNG", bytesFigura["png"], f"{nombre}.png", "image/png", key=f"png_{nombre}"
+            "Descargar PNG", bytesFigura["png"], f"{nombre}.png", "image/png", key=self.clave(f"png_{nombre}")
         )
         columnaSvg.download_button(
-            "Descargar SVG", bytesFigura["svg"], f"{nombre}.svg", "image/svg+xml", key=f"svg_{nombre}"
+            "Descargar SVG", bytesFigura["svg"], f"{nombre}.svg", "image/svg+xml", key=self.clave(f"svg_{nombre}")
         )
 
     def guardarEnOutputs(self, tablas: dict, figuras: dict) -> None:
@@ -278,7 +289,7 @@ class InterfazStreamlit:
 
     def obtenerCaudalDiseno(self):
         """Caudal de equipamiento (m³/s) del módulo 1, o None si aún no se calculó."""
-        estado = st.session_state.get("resultadosAnalisis")
+        estado = st.session_state.get(self.clave("resultadosAnalisis"))
         if estado is None:
             st.info(
                 "Primero calcula el módulo 1: el caudal de diseño es el caudal de equipamiento (Qe) "
@@ -379,10 +390,10 @@ class InterfazStreamlit:
             }
         )
         columnaPng, columnaSvg, _ = st.columns([1, 1, 4])
-        columnaPng.download_button("Descargar PNG", figura["png"], "seccionCanal.png", "image/png", key="png_seccionCanal")
-        columnaSvg.download_button("Descargar SVG", figura["svg"], "seccionCanal.svg", "image/svg+xml", key="svg_seccionCanal")
+        columnaPng.download_button("Descargar PNG", figura["png"], "seccionCanal.png", "image/png", key=self.clave("png_seccionCanal"))
+        columnaSvg.download_button("Descargar SVG", figura["svg"], "seccionCanal.svg", "image/svg+xml", key=self.clave("svg_seccionCanal"))
         st.dataframe(dfCanal)
-        st.download_button("Descargar CSV", dfCanal.write_csv().encode("utf-8"), "canalDerivacion.csv", "text/csv", key="csv_canal")
+        st.download_button("Descargar CSV", dfCanal.write_csv().encode("utf-8"), "canalDerivacion.csv", "text/csv", key=self.clave("csv_canal"))
         if st.button("Guardar el canal en la carpeta outputs"):
             self.guardarEnOutputs({"canalDerivacion": dfCanal}, {"seccionCanal": figura})
 
@@ -501,7 +512,7 @@ class InterfazStreamlit:
         self.mostrarFiguraConBytes(figuraConvergencia, "convergenciaDiametro")
         st.dataframe(dfHistorial)
         st.download_button(
-            "Descargar CSV", dfHistorial.write_csv().encode("utf-8"), "tuberiaForzadaIteraciones.csv", "text/csv", key="csv_tuberia"
+            "Descargar CSV", dfHistorial.write_csv().encode("utf-8"), "tuberiaForzadaIteraciones.csv", "text/csv", key=self.clave("csv_tuberia")
         )
 
         if st.button("Guardar la tubería forzada en la carpeta outputs"):
@@ -530,7 +541,7 @@ class InterfazStreamlit:
             st.caption("Del concreto, que se da como rango, se usa el valor medio; con «Otro» puedes ingresar un valor propio.")
 
     def ejecutar(self) -> None:
-        st.set_page_config(page_title="Caudal de diseño", layout="wide")
+        st.set_page_config(page_title="Hidráulica · caudal de diseño", layout="wide")
         st.title("Análisis de caudal de diseño para una central hidroeléctrica")
 
         parametros, calcularPresionado = self.mostrarBarraLateral()
@@ -541,7 +552,7 @@ class InterfazStreamlit:
             ["1. Caudal de equipamiento", "2. Canal de derivación", "3. Tubería forzada"]
         )
         with pestanaModulo1:
-            if "resultadosAnalisis" in st.session_state:
+            if self.clave("resultadosAnalisis") in st.session_state:
                 self.mostrarResultados()
             else:
                 st.info(

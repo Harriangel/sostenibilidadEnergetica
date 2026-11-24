@@ -2,17 +2,20 @@ from pathlib import Path
 
 import polars as pl
 
-from calculadoraPotencia import CalculadoraPotencia
-from graficador import Graficador
-from lectorDatos import LectorDatos
-from procesadorCaudales import ProcesadorCaudales
+from energias.hidraulica.calculadoraPotencia import CalculadoraPotencia
+from energias.hidraulica.graficador import Graficador
+from energias.hidraulica.lectorDatos import LectorDatos
+from energias.hidraulica.procesadorCaudales import ProcesadorCaudales
 
 
 class AnalisisCaudalDiseno:
     """Clase principal: ejecuta el pipeline de análisis de caudales históricos
     para determinar el caudal de diseño de una potencial central hidroeléctrica."""
 
-    # Archivo que se busca en 'data' si no se indica nombreArchivo
+    # Carpetas de la tecnología dentro de data/ y outputs/
+    nombreTecnologia = "hidraulica"
+
+    # Archivo que se busca en 'data/hidraulica' si no se indica nombreArchivo
     archivosPorDefecto = {"IDEAM": "descargaDhime.csv", "CONAGUA": "SAACP.csv"}
 
     def __init__(
@@ -31,13 +34,13 @@ class AnalisisCaudalDiseno:
         pasoQe: float = None,
         minDiasPorPeriodo: int = 300,
     ):
-        self.carpetaRaiz = Path(__file__).resolve().parent.parent
-        self.carpetaData = self.carpetaRaiz / "data"
-        self.carpetaSalidas = self.carpetaRaiz / "outputs"
+        self.carpetaRaiz = Path(__file__).resolve().parents[2]
+        self.carpetaData = self.carpetaRaiz / "data" / self.nombreTecnologia
+        self.carpetaSalidas = self.carpetaRaiz / "outputs" / self.nombreTecnologia
         self.fuente = fuente.strip().upper()
         if nombreArchivo is None:
             nombreArchivo = self.archivosPorDefecto.get(self.fuente, "")
-        # rutaArchivo (completa) tiene prioridad sobre nombreArchivo (dentro de 'data')
+        # rutaArchivo (completa) tiene prioridad sobre nombreArchivo (dentro de 'data/hidraulica')
         self.rutaDatos = Path(rutaArchivo) if rutaArchivo is not None else self.carpetaData / nombreArchivo
 
         self.lector = LectorDatos(self.rutaDatos, self.fuente)
@@ -143,7 +146,8 @@ class AnalisisCaudalDiseno:
         }
 
     def guardarResultados(self, resultados: dict, figuras: dict) -> Path:
-        """Exporta los csv y las figuras (png y svg) a la carpeta outputs."""
+        """Exporta los csv y las figuras (png y svg) a la carpeta outputs/hidraulica (la crea si no existe)."""
+        self.carpetaSalidas.mkdir(parents=True, exist_ok=True)
         resultados["dfPromedio"].write_csv(self.carpetaSalidas / "caudalClasificadoPromedio.csv")
         resultados["dfEnergia"].write_csv(self.carpetaSalidas / "energiaAnualPorCaudalEquipamiento.csv")
         resultados["dfEnergiaDiaria"].write_csv(self.carpetaSalidas / "energiaDiariaCaudalOptimo.csv")
@@ -168,20 +172,3 @@ class AnalisisCaudalDiseno:
         print(f"\nResultados exportados en: {self.carpetaSalidas}")
         return dfEnergia
 
-
-if __name__ == "__main__":
-    # Parámetros editables
-    AnalisisCaudalDiseno(
-        fuente="CONAGUA",        # IDEAM (Colombia) o CONAGUA (México)
-        nombreArchivo=None,      # None usa el archivo por defecto de la fuente; o ej. "SAACP.csv"
-        minDiasPorPeriodo=300,   # días con dato mínimos para incluir un periodo
-        saltoNeto=150,           # metros
-        tipoTurbina="Francis",   # Pelton, Ossberger, Kaplan, Semikaplan, Francis o Hélice
-        unidadEnergia="kW",      # W, kW, MW o GW (la energía se expresa en Wh, kWh, MWh o GWh)
-        densidadAgua=1000,       # kg/m³
-        gravedad=9.8,            # m/s²
-        eficienciaTurbina=0.85,  # ηg (se ignora si se indica eficienciaTotal)
-        eficienciaGenerador=0.95,  # ηG (se ignora si se indica eficienciaTotal)
-        eficienciaTotal=0.88,    # ηg*ηG; con None se usa ηg*ηG
-        pasoQe=None,             # None: automático según el caudal máximo; o un valor en m³/s
-    ).ejecutar()

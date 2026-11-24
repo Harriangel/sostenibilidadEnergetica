@@ -1,54 +1,100 @@
-# Análisis de caudal de diseño para una central hidroeléctrica
+# Plataforma de diseño de centrales de energía renovable
 
-Programa en Python que analiza la serie histórica de caudales medios diarios de una estación hidrológica (formato DHIME) para construir la curva de caudal clasificado promedio y determinar el caudal de equipamiento que maximiza la energía anual generada por una potencial central hidroeléctrica.
+Plataforma en Python para el **diseño de prefactibilidad** de centrales de energía renovable, con un módulo por tecnología. Cada módulo estima el recurso y la energía anual, dimensiona los componentes principales y calcula indicadores económicos comparables entre tecnologías.
+
+El proyecto empezó como un aplicativo para el caudal de diseño de una pequeña central hidroeléctrica (versiones 1.0.0 a 3.0.0, ver `CHANGELOG.md`). Desde la versión 4.0.0 el cálculo vive en el paquete `energias/` y la interfaz es una aplicación Streamlit multipágina.
+
+## Módulos disponibles
+
+| Tecnología | Módulo | Qué calcula |
+|---|---|---|
+| Hidráulica (pequeña central) | `energias/hidraulica/` | Caudal de equipamiento (Qe) de energía máxima, canal de derivación y diámetro económico de la tubería forzada |
+| Común | `energias/comun/` | Unidades de potencia y energía (W/kW/MW/GW, J↔Wh) y utilidades de gráficas (guardado en png y svg, bytes, formatos de eje) |
+
+La hoja de ruta de las demás tecnologías está en `docs/contextoProyecto.md`.
 
 ## Estructura del proyecto
 
 ```
-analisisCaudal/
-├── .venv/            Entorno virtual (polars, matplotlib, numpy, streamlit)
-├── data/             Archivos de entrada en .csv (descargaDhime.csv)
-├── outputs/          Resultados en .csv, .svg y .png
+<repositorio>/
+├── pyproject.toml          Paquete instalable (pip install -e .) y configuración de pytest
+├── requirements.txt        polars, matplotlib, numpy, streamlit, pytest
+├── energias/               Paquete de cálculo (no importa Streamlit)
+│   ├── comun/
+│   │   ├── unidades.py     Unidades: factores de potencia y energía, J↔Wh
+│   │   └── graficos.py     Graficos: guardado de figuras, bytes y formatos de eje
+│   └── hidraulica/
+│       ├── analisisCaudalDiseno.py   AnalisisCaudalDiseno: clase principal del caudal de equipamiento
+│       ├── lectorDatos.py            LectorDatos
+│       ├── procesadorCaudales.py     ProcesadorCaudales
+│       ├── calculadoraPotencia.py    CalculadoraPotencia
+│       ├── disenoCanal.py            DisenoCanal (canal de derivación)
+│       ├── disenoTuberiaForzada.py   DisenoTuberiaForzada (diámetro económico)
+│       └── graficador.py             Graficador (figuras de la hidráulica)
+├── interfaz/
+│   ├── app.py              Página de inicio
+│   └── pages/
+│       └── 1_Hidraulica.py Hidráulica: caudal de equipamiento, canal y tubería
 ├── scripts/
-│   ├── analisisCaudalDiseno.py   Clase principal AnalisisCaudalDiseno (se ejecuta al final)
-│   ├── interfazStreamlit.py      Interfaz web (clase InterfazStreamlit)
-│   ├── disenoCanal.py            Clase DisenoCanal (canal de derivación)
-│   ├── disenoTuberiaForzada.py   Clase DisenoTuberiaForzada (diámetro económico)
-│   ├── lectorDatos.py            Clase LectorDatos
-│   ├── procesadorCaudales.py     Clase ProcesadorCaudales
-│   ├── calculadoraPotencia.py    Clase CalculadoraPotencia
-│   └── graficador.py             Clase Graficador
-└── requirements.txt
+│   └── ejecutarHidraulica.py   Ejecución por consola de la hidráulica
+├── data/hidraulica/        descargaDhime.csv (IDEAM), SAACP.csv (CONAGUA)
+├── outputs/hidraulica/     Resultados (se crea al ejecutar; no se versiona)
+├── tests/                  Pruebas pytest (regresión, módulos comunes e interfaz)
+└── docs/                   Contexto del proyecto y especificaciones con sus Excel
 ```
 
-## Instalación y ejecución
+## Instalación
 
-Desde la carpeta raíz del proyecto (Windows):
+Desde la carpeta raíz del repositorio, en PowerShell (Windows, Python 3.13):
 
-```
+```powershell
 python -m venv .venv
-.venv\Scripts\activate
-pip install -r requirements.txt
-python scripts\analisisCaudalDiseno.py
+.venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
+python -m pip install -e .
 ```
 
-Los archivos de datos se colocan en `data/`. Se elige la fuente con el parámetro `fuente` (ver "Parámetros").
+`pip install -e .` instala el paquete `energias` en modo editable: los cambios en el código se usan sin reinstalar, y los scripts, la interfaz y las pruebas lo importan con `from energias.<tecnologia>.<modulo> import <Clase>`.
+
+## Ejecución
+
+### Consola
+
+```powershell
+python scripts\ejecutarHidraulica.py
+```
+
+Los parámetros se editan al inicio de `scripts/ejecutarHidraulica.py`. Con los valores por defecto (CONAGUA, H = 150 m, Francis, η total = 0,88) imprime `Energía anual máxima: 1,516,526,226.3 kWh/año con Qe = 238.79 m³/s` y guarda los resultados en `outputs/hidraulica/`.
 
 ### Interfaz web (Streamlit)
 
-Con el entorno virtual activado y desde la carpeta raíz del proyecto:
-
-```
-python -m streamlit run scripts\interfazStreamlit.py
+```powershell
+python -m streamlit run interfaz\app.py
 ```
 
-Se abre el navegador en `http://localhost:8501`. La primera vez Streamlit puede pedir un correo en la consola; se puede dejar vacío y pulsar Enter. Para cerrar la interfaz, `Ctrl + C` en la consola.
+Se abre el navegador en `http://localhost:8501`. La página de inicio describe la plataforma y las tecnologías disponibles; cada tecnología tiene su página en la barra lateral. La primera vez Streamlit puede pedir un correo en la consola; se puede dejar vacío y pulsar Enter. Para cerrar la interfaz, `Ctrl + C` en la consola.
 
-La interfaz tiene tres pestañas: **1. Caudal de equipamiento**, **2. Canal de derivación** y **3. Tubería forzada**. Las dos últimas usan como caudal de diseño el caudal de equipamiento (Qe) de energía máxima del módulo 1, por lo que este debe calcularse primero.
+La página **Hidráulica** tiene tres pestañas: **1. Caudal de equipamiento**, **2. Canal de derivación** y **3. Tubería forzada**. Las dos últimas usan como caudal de diseño el caudal de equipamiento (Qe) de energía máxima del módulo 1, por lo que este debe calcularse primero.
 
-En la barra lateral (módulo 1) se elige la fuente (IDEAM o CONAGUA), el archivo (de la carpeta `data` o subiendo uno) y los parámetros del cálculo; el botón **Calcular** muestra las métricas principales, las tres gráficas y las tablas. Cada gráfica y tabla tiene su botón de descarga (PNG, SVG o CSV), y el botón **Guardar resultados en la carpeta outputs** exporta todo igual que la ejecución por consola.
+En la barra lateral se elige la fuente (IDEAM o CONAGUA), el archivo (de la carpeta `data/hidraulica` o subiendo uno) y los parámetros del cálculo; el botón **Calcular** muestra las métricas principales, las gráficas y las tablas. Cada gráfica y tabla tiene su botón de descarga (PNG, SVG o CSV), y el botón **Guardar resultados en la carpeta outputs** exporta todo a `outputs/hidraulica/`, igual que la ejecución por consola.
 
-## Fuentes de datos
+### Pruebas
+
+```powershell
+python -m pytest
+```
+
+Las pruebas reproducen los resultados de referencia de la hidráulica (`docs/contextoAplicativo.md`, sección 7), prueban los módulos comunes y cargan cada página de la interfaz con `streamlit.testing.v1.AppTest`.
+
+## Salidas
+
+Cada tecnología guarda sus resultados en `outputs/<tecnologia>/`, que se crea al guardar. Los archivos tienen siempre el mismo nombre, así que una nueva ejecución sobrescribe los anteriores. El contenido de `outputs/` no se versiona.
+
+## Módulo hidráulico
+
+Analiza la serie histórica de caudales medios diarios de una estación hidrológica para construir la curva de caudal clasificado promedio y determinar el caudal de equipamiento que maximiza la energía anual de una potencial pequeña central hidroeléctrica. Con ese Qe como caudal de diseño, dimensiona el canal de derivación y el diámetro económico de la tubería forzada.
+
+### Fuentes de datos
 
 | | IDEAM (Colombia, DHIME) | CONAGUA (México) |
 |---|---|---|
@@ -61,9 +107,9 @@ En la barra lateral (módulo 1) se elige la fuente (IDEAM o CONAGUA), el archivo
 
 El lector busca la línea del encabezado, por lo que acepta cualquier cantidad de líneas de metadatos, y lee el archivo en UTF-8 (con respaldo en latin-1). Para otro archivo de la misma fuente, indica su nombre en `nombreArchivo`.
 
-## Flujo de trabajo (pipeline)
+### Flujo de trabajo (pipeline)
 
-1. Lee el archivo de la carpeta `data` según la fuente elegida (IDEAM o CONAGUA).
+1. Lee el archivo de la carpeta `data/hidraulica` según la fuente elegida (IDEAM o CONAGUA).
 2. Extrae `Fecha` (date) y `Valor` (float). `Valor` pasa a llamarse `Caudal`.
 3. Agrega las columnas `Ano`, `Mes` y `Dia`.
 4. Asigna cada fecha a un periodo anual de octubre a septiembre. El periodo se identifica con el año en que inicia (periodo 2000 = 1° de octubre de 2000 a 30 de septiembre de 2001). Se conservan solo los periodos con al menos `minDiasPorPeriodo` días con dato (300 por defecto).
@@ -75,12 +121,12 @@ El lector busca la línea del encabezado, por lo que acepta cualquier cantidad d
 10. Exporta `NumDia` y `CaudalClasificadoPromedio`.
 11. Calcula la energía anual para cada caudal de equipamiento (ver más abajo), la grafica contra `Qe`, identifica el `Qe` de energía máxima y grafica la energía generada cada día con ese `Qe` sobre la curva de caudal clasificado promedio.
 
-### Consideraciones sobre los datos
+#### Consideraciones sobre los datos
 
 - El 29 de febrero se descarta para que todos los periodos tengan 365 días.
 - Los periodos con menos de `minDiasPorPeriodo` días con dato se excluyen; en los demás, los días faltantes se completan con caudal nulo. Como esos días quedan al final de la clasificación, las posiciones altas de la curva promedio (caudales bajos) se calculan con menos periodos que las posiciones bajas, y en la última posición pueden aportar muy pocos. Al ejecutar, el programa imprime la cobertura de cada periodo.
 
-## Potencia y energía generada
+### Potencia y energía generada
 
 Para cada caudal de equipamiento `Qe` se aplica, fila por fila sobre `CaudalClasificadoPromedio`:
 
@@ -102,12 +148,12 @@ Para cada caudal de equipamiento `Qe` se aplica, fila por fila sobre `CaudalClas
 
 Si se indica un valor en `pasoQe`, se usa ese paso sin importar el caudal.
 
-### Parámetros (se editan al final de `scripts/analisisCaudalDiseno.py`)
+#### Parámetros (se editan en `scripts/ejecutarHidraulica.py`)
 
 | Parámetro | Descripción | Valor por defecto |
 |---|---|---|
 | `fuente` | Fuente del archivo: `IDEAM` o `CONAGUA` | IDEAM |
-| `nombreArchivo` | Archivo en `data/`; con `None` se usa el de la fuente | None |
+| `nombreArchivo` | Archivo en `data/hidraulica/`; con `None` se usa el de la fuente | None |
 | `minDiasPorPeriodo` | Días con dato mínimos para incluir un periodo | 300 |
 | `saltoNeto` | Salto neto H (m) | 10 |
 | `tipoTurbina` | Pelton, Ossberger, Kaplan, Semikaplan, Francis o Hélice | Kaplan |
@@ -130,9 +176,9 @@ Factor K por tipo de turbina:
 | Francis | 0.35 |
 | Hélice | 0.65 |
 
-## Módulo 2: canal de derivación
+### Canal de derivación
 
-Canal de sección trapezoidal con la ecuación de Chezy-Manning (`disenoCanal.py`). Los lados de la sección se llaman **x** (ancho superior), **y** (ancho de la base), **z** (profundidad del agua) y **w** (lado inclinado); la letra **A** se usa solo para el área.
+Canal de sección trapezoidal con la ecuación de Chezy-Manning (`energias/hidraulica/disenoCanal.py`). Los lados de la sección se llaman **x** (ancho superior), **y** (ancho de la base), **z** (profundidad del agua) y **w** (lado inclinado); la letra **A** se usa solo para el área.
 
 Dos modos de cálculo:
 - **Dimensionar para el caudal de diseño:** con el ancho de la base `y`, el talud (proyección horizontal / altura), la pendiente y el coeficiente de Manning, se calcula la profundidad normal `z` que conduce el caudal de diseño (resolviendo Manning por bisección).
@@ -152,9 +198,9 @@ Fr = v / sqrt(g · A / x)
 
 **Número de Froude (Fr):** compara la velocidad del agua con la velocidad con que viaja una pequeña onda en su superficie. Con Fr < 1 el flujo es subcrítico (lento y profundo, estable; es el régimen habitual de un canal de derivación); con Fr > 1 es supercrítico (rápido y somero; puede erosionar y formar resaltos hidráulicos). Cerca de 1 el flujo es inestable, por lo que como regla práctica se evitan valores aproximadamente entre 0,8 y 1,2.
 
-## Módulo 3: tubería forzada
+### Tubería forzada
 
-Diámetro económico de la tubería forzada (`disenoTuberiaForzada.py`). El caudal de diseño es el Qe del módulo 1.
+Diámetro económico de la tubería forzada (`energias/hidraulica/disenoTuberiaForzada.py`). El caudal de diseño es el Qe del módulo 1.
 
 **Iteración:** en cada paso se calculan, con el diámetro del paso anterior, la velocidad `v = 4Q/(πD²)`, el número de Reynolds, la rugosidad relativa, el factor de fricción `f` y el costo por metro `c`, y con ellos un nuevo diámetro. Se repite hasta que el error relativo entre dos diámetros consecutivos sea menor o igual que la tolerancia (5 % por defecto). El diámetro inicial es el que da la velocidad inicial supuesta (2,5 m/s por defecto).
 
@@ -193,7 +239,7 @@ Tabla de rugosidad absoluta (ε usado en el cálculo, en mm): vidrio y plástico
 
 La correlación del costo de la tubería está en dólares: si se cambia la moneda, el precio de la energía debe ingresarse en esa moneda y la tasa de cambio convierte el costo de la tubería.
 
-## Resultados (carpeta `outputs`)
+### Resultados (carpeta `outputs/hidraulica`)
 
 Los archivos de salida tienen siempre el mismo nombre, por lo que una nueva ejecución sobrescribe los resultados anteriores.
 

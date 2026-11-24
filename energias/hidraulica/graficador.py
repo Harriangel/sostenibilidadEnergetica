@@ -1,4 +1,3 @@
-from io import BytesIO
 from pathlib import Path
 
 import matplotlib
@@ -7,21 +6,24 @@ import polars as pl
 from matplotlib.figure import Figure
 from matplotlib.ticker import FuncFormatter
 
-from disenoTuberiaForzada import DisenoTuberiaForzada
+from energias.comun.graficos import Graficos
+from energias.hidraulica.disenoTuberiaForzada import DisenoTuberiaForzada
 
 
 class Graficador:
-    """Crea las gráficas del análisis y las guarda en png y svg.
+    """Crea las gráficas específicas de la hidráulica y las guarda en png y svg.
 
     Las figuras se crean con la API orientada a objetos de matplotlib (Figure),
     sin pyplot, para poder usarlas tanto en scripts como en la interfaz web.
+    El guardado, la conversión a bytes y los formatos de eje vienen de
+    energias.comun.graficos.
     """
 
-    formatosSalida = ("png", "svg")
+    formatosSalida = Graficos.formatosSalida
 
     def __init__(self, carpetaSalidas: Path):
+        # La carpeta se crea al guardar, no al construir el graficador
         self.carpetaSalidas = Path(carpetaSalidas)
-        self.carpetaSalidas.mkdir(parents=True, exist_ok=True)
 
     def etiquetaPeriodo(self, periodo: int) -> str:
         return f"{periodo}-{periodo + 1}"
@@ -31,18 +33,11 @@ class Graficador:
         return matplotlib.colormaps["turbo"](np.linspace(0.05, 0.95, nColores))
 
     def guardarFigura(self, fig: Figure, nombreArchivo: str) -> None:
-        for formato in self.formatosSalida:
-            fig.savefig(
-                self.carpetaSalidas / f"{nombreArchivo}.{formato}",
-                dpi=200,
-                bbox_inches="tight",
-            )
+        Graficos.guardarFigura(fig, self.carpetaSalidas, nombreArchivo)
 
     def figuraABytes(self, fig: Figure, formato: str) -> bytes:
         """Figura en memoria (png o svg), por ejemplo para botones de descarga."""
-        buffer = BytesIO()
-        fig.savefig(buffer, format=formato, dpi=200, bbox_inches="tight")
-        return buffer.getvalue()
+        return Graficos.figuraABytes(fig, formato)
 
     def crearFiguraCaudalesPorPeriodo(self, df: pl.DataFrame) -> Figure:
         """Paso 6: NumDia vs Caudal, una línea por periodo."""
@@ -134,7 +129,7 @@ class Graficador:
         ax.set_title("Energía anual generada vs caudal de equipamiento")
         ax.set_xlabel("Caudal de equipamiento Qe (m³/s)")
         ax.set_ylabel(f"Energía anual ({unidadEnergia}h/año)")
-        ax.yaxis.set_major_formatter(FuncFormatter(lambda valor, _: f"{valor:,.0f}"))
+        ax.yaxis.set_major_formatter(Graficos.formatoMiles())
         ax.grid(True, alpha=0.3)
         ax.legend()
         return fig
@@ -164,7 +159,7 @@ class Graficador:
         )
         ax.set_xlabel("Número de día (posición en la clasificación)")
         ax.set_ylabel(f"Energía diaria ({unidadEnergia}h/día)")
-        ax.yaxis.set_major_formatter(FuncFormatter(lambda valor, _: f"{valor:,.0f}"))
+        ax.yaxis.set_major_formatter(Graficos.formatoMiles())
         ax.set_xlim(1, 365)
         ax.set_ylim(bottom=0)
         ax.grid(True, alpha=0.3)
@@ -267,7 +262,7 @@ class Graficador:
         ax.set_title("Diagrama de Moody")
         ax.grid(True, which="both", alpha=0.3)
         ax.legend(loc="lower left", fontsize=9)
-        formatoComa = FuncFormatter(lambda valor, _: f"{valor:g}".replace(".", ","))
+        formatoComa = Graficos.formatoComaDecimal()
         ax.yaxis.set_major_formatter(formatoComa)
         ax.yaxis.set_minor_formatter(formatoComa)
         ax.tick_params(axis="y", which="minor", labelsize=7)
@@ -287,7 +282,7 @@ class Graficador:
         axError.plot(iteraciones, dfHistorial["ErrorRelativo_pct"].to_numpy(), marker="o", color="tab:purple", label="Error relativo")
         axError.axhline(tolerancia * 100, color="tab:red", linestyle="--", label=f"Tolerancia ({tolerancia * 100:g} %)")
         axError.set_yscale("log")
-        axError.yaxis.set_major_formatter(FuncFormatter(lambda valor, _: f"{valor:g}"))
+        axError.yaxis.set_major_formatter(Graficos.formatoGeneral())
         axError.yaxis.set_minor_formatter(FuncFormatter(lambda valor, _: f"{valor:g}" if valor in (2, 3, 5, 20, 30, 50) else ""))
         axError.set_xlabel("Iteración")
         axError.set_ylabel("Error relativo (%)")

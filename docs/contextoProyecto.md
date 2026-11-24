@@ -15,7 +15,7 @@ Los cálculos de cada tecnología se estudian primero en Excel. Luego se convier
 
 | Tecnología | Estado del estudio | Estado en el aplicativo |
 |---|---|---|
-| Hidráulica (pequeña central) | En estudio | Implementada: caudal de equipamiento, canal de derivación, tubería forzada (v3.0.0) |
+| Hidráulica (pequeña central) | En estudio | Implementada: caudal de equipamiento, canal de derivación, tubería forzada (v3.0.0; en `energias/hidraulica/` desde la v4.0.0) |
 | Mareomotriz | Estudiada; especificación lista | Siguiente módulo (v4.1.0) |
 | Solar fotovoltaica | Estudiada | Pendiente |
 | Solar térmica | Estudiada | Pendiente |
@@ -65,7 +65,7 @@ Las energías del mar (mareomotriz, corrientes marinas, undimotriz) se agrupan e
 │   ├── comun/
 │   │   ├── economia.py            valor presente, factor de recuperación de capital, LCOE
 │   │   ├── unidades.py            factores W/kW/MW/GW y J↔Wh
-│   │   └── graficos.py            guardado de figuras y conversión a bytes
+│   │   └── graficos.py            guardado de figuras, conversión a bytes y formatos de eje
 │   ├── hidraulica/                lector, procesador, calculadora, canal, tubería, clase principal
 │   └── mar/
 │       └── mareomotriz.py
@@ -77,6 +77,12 @@ Las energías del mar (mareomotriz, corrientes marinas, undimotriz) se agrupan e
 ├── outputs/<tecnologia>/          resultados (no se versionan)
 └── tests/                         una prueba por módulo
 ```
+
+Estado en la v4.0.0: la estructura está implementada salvo `energias/comun/economia.py` y `energias/mar/`, que llegan con la mareomotriz (v4.1.0). Convenciones adoptadas al implementarla:
+- Script de consola por tecnología: `scripts/ejecutar<Tecnologia>.py` (por ejemplo `ejecutarHidraulica.py`), con los parámetros editables al inicio.
+- Página por tecnología: `interfaz/pages/<n>_<Tecnologia>.py` (por ejemplo `1_Hidraulica.py`); el número fija el orden en la barra lateral.
+- Las claves de `st.session_state` y de los widgets de cada página llevan el prefijo de la tecnología (`hidraulica_`, `mareomotriz_`).
+- `outputs/<tecnologia>/` se crea al guardar resultados; en el repositorio solo se versiona `outputs/.gitkeep`.
 
 Principios:
 - **Cálculo separado de la presentación.** `energias/` no importa Streamlit, y las gráficas usan la API `Figure` de matplotlib. Así el cálculo se usa desde la consola, la interfaz y las pruebas.

@@ -2,6 +2,8 @@ import unicodedata
 
 import polars as pl
 
+from energias.comun.unidades import Unidades
+
 
 class CalculadoraPotencia:
     """Calcula la energía anual generada para cada caudal de equipamiento (Qe).
@@ -28,8 +30,8 @@ class CalculadoraPotencia:
     # (límite superior exclusivo, paso). Por encima del último límite se usa el último paso.
     escalonesPasoQe = ((25, 0.1), (100, 1.0), (1000, 10.0), (2000, 50.0))
 
-    # Factor de conversión desde W / Wh a cada unidad
-    factoresUnidad = {"W": 1.0, "kW": 1e-3, "MW": 1e-6, "GW": 1e-9}
+    # Factor de conversión desde W / Wh a cada unidad (común a todas las tecnologías)
+    factoresUnidad = Unidades.factoresPotencia
 
     def __init__(
         self,
@@ -65,12 +67,8 @@ class CalculadoraPotencia:
             )
         self.factorK = self.factoresK[self.tipoTurbina]
 
-        if unidadEnergia not in self.factoresUnidad:
-            raise ValueError(
-                f"Unidad '{unidadEnergia}' no válida. Opciones: W, kW, MW o GW."
-            )
-        self.unidadEnergia = unidadEnergia
-        self.factorUnidad = self.factoresUnidad[unidadEnergia]
+        self.unidadEnergia = Unidades.validarUnidadPotencia(unidadEnergia)
+        self.factorUnidad = Unidades.factorPotencia(unidadEnergia)
         self.nombreColumnaEnergia = f"EnergiaAnual_{unidadEnergia}h"
         self.nombreColumnaEnergiaDiaria = f"EnergiaDiaria_{unidadEnergia}h"
 

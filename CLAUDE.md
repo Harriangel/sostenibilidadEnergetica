@@ -48,11 +48,13 @@ Desde la raíz del repositorio, con el entorno virtual activo:
 python -m pip install -r requirements.txt
 python -m pip install -e .                     # paquete energias en modo editable
 python scripts\ejecutarHidraulica.py           # consola: hidráulica (parámetros al inicio del archivo)
+python scripts\ejecutarMareomotriz.py          # consola: mareomotriz (parámetros al inicio del archivo)
 python -m streamlit run interfaz\app.py        # interfaz web multipágina
 python -m pytest                               # pruebas
 ```
 
 - El cálculo vive en `energias/<tecnologia>/` y se importa con imports absolutos (`from energias.hidraulica.lectorDatos import LectorDatos`).
 - Cada tecnología tiene un script de consola `scripts/ejecutar<Tecnologia>.py` y una página `interfaz/pages/<n>_<Tecnologia>.py`.
-- En la interfaz, las claves de `st.session_state` y de los widgets llevan el prefijo de la tecnología (`hidraulica_`).
+- En la interfaz, las claves de `st.session_state` y de los widgets llevan el prefijo de la tecnología (`hidraulica_`, `mareomotriz_`).
+- El LCOE y los valores presentes se calculan con `energias/comun/economia.py` (`IndicadoresEconomicos`); no se reimplementan en cada tecnología.
 - Datos en `data/<tecnologia>/`; salidas en `outputs/<tecnologia>/`, que se crea al guardar.

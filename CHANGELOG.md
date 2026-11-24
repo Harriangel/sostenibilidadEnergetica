@@ -11,8 +11,29 @@ Las versiones 1.0.0 a 3.0.0 se desarrollaron fuera de Git (octubre y noviembre d
 
 ## [Sin publicar]
 
-### Planeado
-- **4.1.0:** módulo de energías del mar con la central mareomotriz (energía potencial anual y LCOE con escenarios de sensibilidad) y módulo común de economía (`energias/comun/economia.py`).
+## [4.1.0]: central mareomotriz
+
+Añade el módulo de energías del mar con la central mareomotriz y el módulo común de economía. La hidráulica no cambia.
+
+### Añadido
+- **Economía común** (`energias/comun/economia.py`, `IndicadoresEconomicos`), reutilizable por todas las tecnologías: factor de valor presente de una anualidad vencida (vida útil si la tasa es 0), factor de recuperación de capital, valor presente de costos y de energía, y LCOE por valor presente. Valida vida útil > 0 y tasa ≥ 0.
+- **Central mareomotriz** (`energias/mar/mareomotriz.py`, `CentralMareomotriz`), según `docs/especificaciones/mar/Calculo_mareomotriz_LCOE.md` (secciones 3.1 a 3.4):
+  - pasos de agua por turbina y año según el tipo de marea (diurna o semidiurna) y la dirección (unidireccional o bidireccional);
+  - energía potencial y útil anual (J, kWh, MWh y GWh) y potencia media;
+  - LCOE por valor presente con los intermedios (FVP, CRF, valores presentes) y una tabla polars de escenarios (base, A: CAPEX +15 %, B: energía −10 %) con su variación frente al caso base;
+  - barrido de sensibilidad del LCOE frente a la tasa de descuento, la eficiencia, el desnivel o el CAPEX;
+  - ampliaciones de la sección 7: número de turbinas (multiplica energía, CAPEX y OPEX) y disponibilidad (multiplica la energía útil);
+  - validaciones con `ValueError`; tipo de marea y dirección sin distinguir mayúsculas ni tildes;
+  - moneda como etiqueta, EUR por defecto.
+- **Gráficas** (`energias/mar/graficadorMareomotriz.py`): barras del LCOE por escenario y sensibilidad del LCOE con el valor base marcado.
+- **Consola:** `scripts/ejecutarMareomotriz.py`, que imprime las salidas como la sección 4 de la especificación y guarda tablas y gráficas en `outputs/mareomotriz/`.
+- **Interfaz:** página `interfaz/pages/2_Mareomotriz.py` con entradas, métricas, tablas, gráficas, fórmulas en LaTeX, supuestos y descargas en CSV, PNG y SVG.
+- **Pruebas:** `test_economia.py`, `test_mareomotriz.py` (valores del Excel con tolerancia 1e-9, casos borde, validaciones y ampliaciones), `test_graficadorMareomotriz.py` y pruebas de humo de la página.
+- `energias/comun/unidades.py`: `joulesAKWh`; `energias/comun/graficos.py`: formatos de eje en porcentaje y en millones.
+
+### Notas
+- No se implementan las fórmulas alternativas de K31, K36 y K41 del Excel (sección 3.5 de la especificación): subestiman el LCOE.
+- Las etiquetas usan las unidades correctas: LCOE en moneda/kWh (y moneda/MWh) y CAPEX en moneda por turbina; las leyendas del Excel tenían erratas.
 
 ## [4.0.0]: reestructuración multitecnología
 

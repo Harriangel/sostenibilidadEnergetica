@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "plataforma-energias"
+version = "4.0.0"
+description = "Plataforma para el diseño de prefactibilidad de centrales de energía renovable"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "polars",
+    "matplotlib",
+    "numpy",
+]
+
+[project.optional-dependencies]
+interfaz = ["streamlit"]
+pruebas = ["pytest", "streamlit"]
+
+[tool.setuptools.packages.find]
+include = ["energias*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

@@ -2,7 +2,7 @@
 (docs/contextoAplicativo.md, sección 7)."""
 import pytest
 
-from analisisCaudalDiseno import AnalisisCaudalDiseno
+from energias.hidraulica.analisisCaudalDiseno import AnalisisCaudalDiseno
 
 toleranciaRelativa = 1e-9
 

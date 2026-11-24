@@ -4,11 +4,11 @@ from pathlib import Path
 import polars as pl
 import streamlit as st
 
-from analisisCaudalDiseno import AnalisisCaudalDiseno
-from calculadoraPotencia import CalculadoraPotencia
-from disenoCanal import DisenoCanal
-from disenoTuberiaForzada import DisenoTuberiaForzada
-from graficador import Graficador
+from energias.hidraulica.analisisCaudalDiseno import AnalisisCaudalDiseno
+from energias.hidraulica.calculadoraPotencia import CalculadoraPotencia
+from energias.hidraulica.disenoCanal import DisenoCanal
+from energias.hidraulica.disenoTuberiaForzada import DisenoTuberiaForzada
+from energias.hidraulica.graficador import Graficador
 
 carpetaOutputs = Path(__file__).resolve().parent.parent / "outputs"
 

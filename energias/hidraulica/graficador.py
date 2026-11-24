@@ -7,7 +7,7 @@ import polars as pl
 from matplotlib.figure import Figure
 from matplotlib.ticker import FuncFormatter
 
-from disenoTuberiaForzada import DisenoTuberiaForzada
+from energias.hidraulica.disenoTuberiaForzada import DisenoTuberiaForzada
 
 
 class Graficador:

@@ -1,7 +1,7 @@
 """Regresión del módulo 3 (tubería forzada) y de Colebrook con los valores de referencia de la v3.0.0."""
 import pytest
 
-from disenoTuberiaForzada import DisenoTuberiaForzada
+from energias.hidraulica.disenoTuberiaForzada import DisenoTuberiaForzada
 
 toleranciaRelativa = 1e-9
 

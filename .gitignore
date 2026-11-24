@@ -4,6 +4,8 @@ venv/
 __pycache__/
 *.pyc
 .pytest_cache/
+*.egg-info/
+build/
 
 # Resultados generados por el aplicativo (se regeneran al ejecutar)
 outputs/*

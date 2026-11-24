@@ -1,7 +1,7 @@
 """Regresión del módulo 2 (canal de derivación) con los valores de referencia de la v3.0.0."""
 import pytest
 
-from disenoCanal import DisenoCanal
+from energias.hidraulica.disenoCanal import DisenoCanal
 
 toleranciaRelativa = 1e-9
 

@@ -2,10 +2,10 @@ from pathlib import Path
 
 import polars as pl
 
-from calculadoraPotencia import CalculadoraPotencia
-from graficador import Graficador
-from lectorDatos import LectorDatos
-from procesadorCaudales import ProcesadorCaudales
+from energias.hidraulica.calculadoraPotencia import CalculadoraPotencia
+from energias.hidraulica.graficador import Graficador
+from energias.hidraulica.lectorDatos import LectorDatos
+from energias.hidraulica.procesadorCaudales import ProcesadorCaudales
 
 
 class AnalisisCaudalDiseno:
@@ -31,7 +31,7 @@ class AnalisisCaudalDiseno:
         pasoQe: float = None,
         minDiasPorPeriodo: int = 300,
     ):
-        self.carpetaRaiz = Path(__file__).resolve().parent.parent
+        self.carpetaRaiz = Path(__file__).resolve().parents[2]
         self.carpetaData = self.carpetaRaiz / "data"
         self.carpetaSalidas = self.carpetaRaiz / "outputs"
         self.fuente = fuente.strip().upper()

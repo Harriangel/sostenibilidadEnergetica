@@ -11,6 +11,8 @@ Las versiones 1.0.0 a 3.0.0 se desarrollaron fuera de Git (octubre y noviembre d
 
 ## [Sin publicar]
 
+## [4.1.1]: corrección de un aviso de polars
+
 ### Corregido
 - `ProcesadorCaudales.asignarPeriodosAnuales` usaba `is_in` con una serie del mismo tipo, obsoleto en polars (`DeprecationWarning`); ahora pasa la serie con `implode()`. Los resultados no cambian.
 

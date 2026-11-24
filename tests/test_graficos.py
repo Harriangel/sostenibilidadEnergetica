@@ -35,3 +35,5 @@ def test_formatosDeEje():
     assert Graficos.formatoGeneral()(0.5, 0) == "0.5"
     assert Graficos.formatoComaDecimal()(0.02, 0) == "0,02"
     assert Graficos.formatoDecimales(2)(1234.567, 0) == "1,234.57"
+    assert Graficos.formatoPorcentaje()(0.07, 0) == "7 %"
+    assert Graficos.formatoMillones()(14_500_000, 0) == "14.5"

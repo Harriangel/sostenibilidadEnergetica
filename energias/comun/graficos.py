@@ -60,3 +60,13 @@ class Graficos:
     def formatoDecimales(decimales: int) -> FuncFormatter:
         """Número fijo de decimales con separador de miles: 1,234.56."""
         return FuncFormatter(lambda valor, _: f"{valor:,.{decimales}f}")
+
+    @staticmethod
+    def formatoMillones() -> FuncFormatter:
+        """Valor en millones: 14500000 → 14.5."""
+        return FuncFormatter(lambda valor, _: f"{valor / 1e6:g}")
+
+    @staticmethod
+    def formatoPorcentaje(decimales: int = 0) -> FuncFormatter:
+        """Fracción como porcentaje: 0.07 → 7 %."""
+        return FuncFormatter(lambda valor, _: f"{valor * 100:.{decimales}f} %")

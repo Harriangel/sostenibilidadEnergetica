@@ -12,7 +12,10 @@ class AnalisisCaudalDiseno:
     """Clase principal: ejecuta el pipeline de análisis de caudales históricos
     para determinar el caudal de diseño de una potencial central hidroeléctrica."""
 
-    # Archivo que se busca en 'data' si no se indica nombreArchivo
+    # Carpetas de la tecnología dentro de data/ y outputs/
+    nombreTecnologia = "hidraulica"
+
+    # Archivo que se busca en 'data/hidraulica' si no se indica nombreArchivo
     archivosPorDefecto = {"IDEAM": "descargaDhime.csv", "CONAGUA": "SAACP.csv"}
 
     def __init__(
@@ -32,12 +35,12 @@ class AnalisisCaudalDiseno:
         minDiasPorPeriodo: int = 300,
     ):
         self.carpetaRaiz = Path(__file__).resolve().parents[2]
-        self.carpetaData = self.carpetaRaiz / "data"
-        self.carpetaSalidas = self.carpetaRaiz / "outputs"
+        self.carpetaData = self.carpetaRaiz / "data" / self.nombreTecnologia
+        self.carpetaSalidas = self.carpetaRaiz / "outputs" / self.nombreTecnologia
         self.fuente = fuente.strip().upper()
         if nombreArchivo is None:
             nombreArchivo = self.archivosPorDefecto.get(self.fuente, "")
-        # rutaArchivo (completa) tiene prioridad sobre nombreArchivo (dentro de 'data')
+        # rutaArchivo (completa) tiene prioridad sobre nombreArchivo (dentro de 'data/hidraulica')
         self.rutaDatos = Path(rutaArchivo) if rutaArchivo is not None else self.carpetaData / nombreArchivo
 
         self.lector = LectorDatos(self.rutaDatos, self.fuente)
@@ -143,7 +146,8 @@ class AnalisisCaudalDiseno:
         }
 
     def guardarResultados(self, resultados: dict, figuras: dict) -> Path:
-        """Exporta los csv y las figuras (png y svg) a la carpeta outputs."""
+        """Exporta los csv y las figuras (png y svg) a la carpeta outputs/hidraulica (la crea si no existe)."""
+        self.carpetaSalidas.mkdir(parents=True, exist_ok=True)
         resultados["dfPromedio"].write_csv(self.carpetaSalidas / "caudalClasificadoPromedio.csv")
         resultados["dfEnergia"].write_csv(self.carpetaSalidas / "energiaAnualPorCaudalEquipamiento.csv")
         resultados["dfEnergiaDiaria"].write_csv(self.carpetaSalidas / "energiaDiariaCaudalOptimo.csv")

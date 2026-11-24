@@ -7,7 +7,7 @@ __pycache__/
 *.egg-info/
 build/
 
-# Resultados generados por el aplicativo (se regeneran al ejecutar)
+# Resultados generados por el aplicativo (outputs/<tecnologia>/, se regeneran al ejecutar)
 outputs/*
 !outputs/.gitkeep
 

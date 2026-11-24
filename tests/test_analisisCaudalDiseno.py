@@ -62,3 +62,26 @@ def test_ideamPasoPeriodosYValoresQe(casoIdeam):
     assert dfResumen.filter(dfResumen["Incluido"]).height == 20
     assert dfResumen.height == 27
     assert resultados["dfEnergia"].height == 227
+
+
+def test_carpetasDeLaTecnologia(casoConagua):
+    analisis, _ = casoConagua
+    assert analisis.rutaDatos.parent.parts[-2:] == ("data", "hidraulica")
+    assert analisis.carpetaSalidas.parts[-2:] == ("outputs", "hidraulica")
+
+
+def test_guardarResultadosCreaLaCarpeta(casoIdeam, tmp_path):
+    analisis, resultados = casoIdeam
+    carpetaOriginal = analisis.carpetaSalidas
+    analisis.carpetaSalidas = tmp_path / "outputs" / "hidraulica"
+    analisis.graficador.carpetaSalidas = analisis.carpetaSalidas
+    try:
+        figuras = analisis.crearFiguras(resultados)
+        analisis.guardarResultados(resultados, figuras)
+    finally:
+        analisis.carpetaSalidas = carpetaOriginal
+        analisis.graficador.carpetaSalidas = carpetaOriginal
+    nombres = {ruta.name for ruta in (tmp_path / "outputs" / "hidraulica").iterdir()}
+    assert {"caudalClasificadoPromedio.csv", "energiaAnualPorCaudalEquipamiento.csv",
+            "energiaDiariaCaudalOptimo.csv", "energiaAnualVsCaudalEquipamiento.png",
+            "energiaAnualVsCaudalEquipamiento.svg"} <= nombres

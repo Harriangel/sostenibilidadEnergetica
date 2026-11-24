@@ -10,7 +10,7 @@ from energias.hidraulica.disenoCanal import DisenoCanal
 from energias.hidraulica.disenoTuberiaForzada import DisenoTuberiaForzada
 from energias.hidraulica.graficador import Graficador
 
-carpetaOutputs = Path(__file__).resolve().parent.parent / "outputs"
+carpetaOutputs = Path(__file__).resolve().parent.parent / "outputs" / "hidraulica"
 
 
 class InterfazStreamlit:
@@ -32,7 +32,7 @@ class InterfazStreamlit:
 
     def __init__(self):
         self.carpetaRaiz = Path(__file__).resolve().parent.parent
-        self.carpetaData = self.carpetaRaiz / "data"
+        self.carpetaData = self.carpetaRaiz / "data" / "hidraulica"
 
     # ------------------------------------------------------------------
     # Entradas

@@ -22,8 +22,8 @@ class Graficador:
     formatosSalida = Graficos.formatosSalida
 
     def __init__(self, carpetaSalidas: Path):
+        # La carpeta se crea al guardar, no al construir el graficador
         self.carpetaSalidas = Path(carpetaSalidas)
-        self.carpetaSalidas.mkdir(parents=True, exist_ok=True)
 
     def etiquetaPeriodo(self, periodo: int) -> str:
         return f"{periodo}-{periodo + 1}"

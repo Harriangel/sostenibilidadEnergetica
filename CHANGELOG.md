@@ -11,6 +11,9 @@ Las versiones 1.0.0 a 3.0.0 se desarrollaron fuera de Git (octubre y noviembre d
 
 ## [Sin publicar]
 
+### Corregido
+- `ProcesadorCaudales.asignarPeriodosAnuales` usaba `is_in` con una serie del mismo tipo, obsoleto en polars (`DeprecationWarning`); ahora pasa la serie con `implode()`. Los resultados no cambian.
+
 ## [4.1.0]: central mareomotriz
 
 Añade el módulo de energías del mar con la central mareomotriz y el módulo común de economía. La hidráulica no cambia.

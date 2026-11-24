@@ -37,3 +37,8 @@ def test_unidadPotenciaInvalida(unidad):
 def test_unidadEnergiaInvalida(unidad):
     with pytest.raises(ValueError):
         Unidades.factorEnergia(unidad)
+
+
+def test_joulesAKWh():
+    assert Unidades.joulesAKWh(3.6e6) == 1.0
+    assert Unidades.joulesAKWh(217056692903225.8) == 217056692903225.8 / 3.6e6

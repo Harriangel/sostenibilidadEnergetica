@@ -12,6 +12,8 @@ analisisCaudal/
 ├── scripts/
 │   ├── analisisCaudalDiseno.py   Clase principal AnalisisCaudalDiseno (se ejecuta al final)
 │   ├── interfazStreamlit.py      Interfaz web (clase InterfazStreamlit)
+│   ├── disenoCanal.py            Clase DisenoCanal (canal de derivación)
+│   ├── disenoTuberiaForzada.py   Clase DisenoTuberiaForzada (diámetro económico)
 │   ├── lectorDatos.py            Clase LectorDatos
 │   ├── procesadorCaudales.py     Clase ProcesadorCaudales
 │   ├── calculadoraPotencia.py    Clase CalculadoraPotencia
@@ -41,6 +43,8 @@ python -m streamlit run scripts\interfazStreamlit.py
 ```
 
 Se abre el navegador en `http://localhost:8501`. La primera vez Streamlit puede pedir un correo en la consola; se puede dejar vacío y pulsar Enter. Para cerrar la interfaz, `Ctrl + C` en la consola.
+
+La interfaz tiene tres pestañas: **1. Caudal de equipamiento**, **2. Canal de derivación** y **3. Tubería forzada**. Las dos últimas usan como caudal de diseño el caudal de equipamiento (Qe) de energía máxima del módulo 1, por lo que este debe calcularse primero.
 
 En la barra lateral (módulo 1) se elige la fuente (IDEAM o CONAGUA), el archivo (de la carpeta `data` o subiendo uno) y los parámetros del cálculo; el botón **Calcular** muestra las métricas principales, las tres gráficas y las tablas. Cada gráfica y tabla tiene su botón de descarga (PNG, SVG o CSV), y el botón **Guardar resultados en la carpeta outputs** exporta todo igual que la ejecución por consola.
 
@@ -126,6 +130,69 @@ Factor K por tipo de turbina:
 | Francis | 0.35 |
 | Hélice | 0.65 |
 
+## Módulo 2: canal de derivación
+
+Canal de sección trapezoidal con la ecuación de Chezy-Manning (`disenoCanal.py`). Los lados de la sección se llaman **x** (ancho superior), **y** (ancho de la base), **z** (profundidad del agua) y **w** (lado inclinado); la letra **A** se usa solo para el área.
+
+Dos modos de cálculo:
+- **Dimensionar para el caudal de diseño:** con el ancho de la base `y`, el talud (proyección horizontal / altura), la pendiente y el coeficiente de Manning, se calcula la profundidad normal `z` que conduce el caudal de diseño (resolviendo Manning por bisección).
+- **Verificar una sección dada:** con `x`, `y` y `z` se calcula la capacidad `Q` (el cálculo de la Hoja 1 del Excel de origen) y se compara con el caudal de diseño.
+
+La pendiente se define por las cotas aguas arriba y aguas abajo y la longitud, o directamente. El coeficiente de Manning se elige entre concreto sin pulir (0,014), canal excavado (0,025) u otro valor.
+
+Fórmulas:
+
+```
+s  = (cota aguas arriba - cota aguas abajo) / L
+w  = sqrt(z² + ((x - y)/2)²)        A = (x + y)/2 · z
+Pm = 2w + y                          Rh = A / Pm
+Q  = Rh^(2/3) · A · s^(1/2) / n      v = Q / A
+Fr = v / sqrt(g · A / x)
+```
+
+**Número de Froude (Fr):** compara la velocidad del agua con la velocidad con que viaja una pequeña onda en su superficie. Con Fr < 1 el flujo es subcrítico (lento y profundo, estable; es el régimen habitual de un canal de derivación); con Fr > 1 es supercrítico (rápido y somero; puede erosionar y formar resaltos hidráulicos). Cerca de 1 el flujo es inestable, por lo que como regla práctica se evitan valores aproximadamente entre 0,8 y 1,2.
+
+## Módulo 3: tubería forzada
+
+Diámetro económico de la tubería forzada (`disenoTuberiaForzada.py`). El caudal de diseño es el Qe del módulo 1.
+
+**Iteración:** en cada paso se calculan, con el diámetro del paso anterior, la velocidad `v = 4Q/(πD²)`, el número de Reynolds, la rugosidad relativa, el factor de fricción `f` y el costo por metro `c`, y con ellos un nuevo diámetro. Se repite hasta que el error relativo entre dos diámetros consecutivos sea menor o igual que la tolerancia (5 % por defecto). El diámetro inicial es el que da la velocidad inicial supuesta (2,5 m/s por defecto).
+
+Factor de fricción de Darcy (se elige el método y se comparan ambos al diámetro final):
+
+```
+Laminar (Re < 2000):  f = 64 / Re
+Colebrook-White:      1/sqrt(f) = -2·log10( εr/3,7 + 2,51/(Re·sqrt(f)) )     (iterativo)
+Swamee-Jain:          f = 0,25 / [ log10( εr/3,7 + 5,74/Re^0,9 ) ]²           (explícito)
+```
+
+El diagrama de Moody se genera con las curvas de Colebrook-White y marca el punto de operación (Re, f).
+
+Otras fórmulas:
+
+```
+Re = ρ·v·D / μ            εr = ε / D
+c  = k · (12,16 + 513,5 · D^1,5)       costo por metro (k = tasa de cambio desde USD)
+D  = 1,106 · ( f·h·p / (η·a·c) )^0,143 · Q^0,43      diámetro económico
+e  = (D + 508) / 400                   espesor, con D y e en mm
+```
+
+| Variable | Descripción | Valor por defecto |
+|---|---|---|
+| ε | Rugosidad absoluta, según el material elegido en la tabla | Hierro galvanizado (0,15 mm) |
+| μ | Viscosidad dinámica (Pa·s) | 0,001 |
+| ρ | Densidad del agua (la del módulo 1) | 1000 kg/m³ |
+| h | Horas de funcionamiento al año | 6000 |
+| p | Precio de la energía (moneda/kWh) | 0,27 |
+| η | Eficiencia global (por defecto la del módulo 1) | Eficiencia total del módulo 1 |
+| a | Factor de amortización | 0,064 |
+| Tolerancia | Error relativo para detener la iteración | 5 % |
+| Moneda | Código de la moneda; con una distinta de USD se pide la tasa de cambio (unidades de la moneda por 1 USD) | USD |
+
+Tabla de rugosidad absoluta (ε usado en el cálculo, en mm): vidrio y plástico 0; PVC 0,0015; concreto 4,95 (valor medio del rango 0,9 a 9); goma lisa 0,01; tubería de cobre o bronce 0,0015; hierro fundido 0,26; hierro galvanizado 0,15; hierro forjado 0,046; acero inoxidable 0,002; acero comercial 0,045. También se puede ingresar un valor propio.
+
+La correlación del costo de la tubería está en dólares: si se cambia la moneda, el precio de la energía debe ingresarse en esa moneda y la tasa de cambio convierte el costo de la tubería.
+
 ## Resultados (carpeta `outputs`)
 
 Los archivos de salida tienen siempre el mismo nombre, por lo que una nueva ejecución sobrescribe los resultados anteriores.
@@ -139,3 +206,5 @@ Los archivos de salida tienen siempre el mismo nombre, por lo que una nueva ejec
 | `energiaAnualVsCaudalEquipamiento.png` / `.svg` | Energía anual vs caudal de equipamiento, con el máximo resaltado |
 | `energiaDiariaCaudalOptimo.csv` | `NumDia`, caudal clasificado promedio, caudal utilizado y `EnergiaDiaria_<unidad>h` con el `Qe` óptimo |
 | `energiaAnualPorCaudalEquipamiento.csv` | `CaudalEquipamiento`, `CaudalMinimoTecnico` y `EnergiaAnual_<unidad>h` |
+
+Con los botones de guardado de las pestañas 2 y 3 de la interfaz también se exportan `canalDerivacion.csv`, `seccionCanal` (png y svg), `tuberiaForzadaIteraciones.csv`, `tuberiaForzadaMetodosFriccion.csv`, `diagramaMoody` (png y svg) y `convergenciaDiametro` (png y svg).

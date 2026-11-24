@@ -7,6 +7,8 @@ import polars as pl
 from matplotlib.figure import Figure
 from matplotlib.ticker import FuncFormatter
 
+from disenoTuberiaForzada import DisenoTuberiaForzada
+
 
 class Graficador:
     """Crea las gráficas del análisis y las guarda en png y svg.
@@ -167,4 +169,129 @@ class Graficador:
         ax.set_ylim(bottom=0)
         ax.grid(True, alpha=0.3)
         ax.legend()
+        return fig
+
+    def crearFiguraSeccionCanal(self, seccion: dict) -> Figure:
+        """Sección trapezoidal del canal con los lados x, y, z y w."""
+        x, y, z, w = seccion["x"], seccion["y"], seccion["z"], seccion["w"]
+        proyeccion = seccion["proyeccionTalud"]
+        margen = max(x, 2 * z) * 0.25
+        fondoTerreno = -0.6 * z
+        xMinimo, xMaximo = -margen * 1.9, x + margen * 1.9
+        yMinimo, yMaximo = fondoTerreno * 1.05, z * 1.45
+
+        # El tamaño de la figura sigue la proporción de los datos para evitar espacios vacíos
+        alto = min(6.0, max(3.2, 9 * (yMaximo - yMinimo) / (xMaximo - xMinimo)))
+        fig = Figure(figsize=(9, alto))
+        ax = fig.subplots()
+        ax.fill(
+            [-margen, 0, proyeccion, proyeccion + y, x, x + margen, x + margen, -margen],
+            [z, z, 0, 0, z, z, fondoTerreno, fondoTerreno],
+            color="#c8b38a",
+        )
+        ax.fill([0, x, proyeccion + y, proyeccion], [z, z, 0, 0], color="#9fd3f5")
+        ax.plot([0, proyeccion, proyeccion + y, x], [z, 0, 0, z], color="black", linewidth=2)
+        ax.plot([0, x], [z, z], color="#1f77b4", linewidth=2)
+
+        flecha = dict(arrowstyle="<->", color="black", linewidth=1.2)
+        caja = dict(facecolor="white", edgecolor="none", alpha=0.75, pad=1.5)
+        # x: ancho superior
+        ax.annotate("", xy=(0, z * 1.18), xytext=(x, z * 1.18), arrowprops=flecha)
+        ax.text(x / 2, z * 1.22, f"x = {x:.2f} m", ha="center", va="bottom", fontsize=11)
+        # y: base
+        ax.annotate("", xy=(proyeccion, fondoTerreno * 0.5), xytext=(proyeccion + y, fondoTerreno * 0.5), arrowprops=flecha)
+        ax.text(proyeccion + y / 2, fondoTerreno * 0.5 - 0.05 * z, f"y = {y:.2f} m", ha="center", va="top", fontsize=11)
+        # z: profundidad (a la derecha)
+        ax.annotate("", xy=(x + margen * 0.45, 0), xytext=(x + margen * 0.45, z), arrowprops=flecha)
+        ax.text(x + margen * 0.52, z / 2, f"z = {z:.2f} m", ha="left", va="center", fontsize=11)
+        # w: lado inclinado (a la izquierda, fuera del agua)
+        ax.text(proyeccion / 2 - 0.03 * x, z / 2, f"w = {w:.2f} m", ha="right", va="center", fontsize=11, bbox=caja)
+        # A: área
+        ax.text(x / 2, z * 0.4, f"A = {seccion['A']:.2f} m²", ha="center", va="center", fontsize=11, bbox=caja)
+
+        ax.set_title("Sección trapezoidal del canal de derivación")
+        ax.set_xlim(xMinimo, xMaximo)
+        ax.set_ylim(yMinimo, yMaximo)
+        ax.set_aspect("equal")
+        ax.axis("off")
+        return fig
+
+    def crearFiguraMoody(self, reynolds: float, factorFriccion: float, rugosidadRelativa: float, metodo: str) -> Figure:
+        """Diagrama de Moody (calculado con Colebrook-White) con el punto de operación."""
+        fig = Figure(figsize=(11, 8))
+        ax = fig.subplots()
+
+        valoresRelativos = [
+            1e-6, 5e-6, 1e-5, 2e-5, 5e-5, 1e-4, 2e-4, 5e-4, 1e-3, 2e-3,
+            4e-3, 6e-3, 8e-3, 0.01, 0.015, 0.02, 0.03, 0.04, 0.05,
+        ]
+        reynoldsTurbulento = np.logspace(np.log10(4000), 8, 200)
+        etiquetas = []
+        for valor in [0.0] + valoresRelativos:
+            factores = [DisenoTuberiaForzada.friccionColebrook(re, valor) for re in reynoldsTurbulento]
+            ax.plot(reynoldsTurbulento, factores, color="tab:blue", linewidth=0.9, alpha=0.8)
+            if valor > 0 and factores[-1] > 0.0082:
+                etiquetas.append((factores[-1], valor))
+            elif valor == 0:
+                ax.text(4e6, 0.0094, "tubería lisa", fontsize=8, color="tab:blue", rotation=-12)
+
+        # Etiquetas de ε/D a la derecha, omitiendo las que quedarían encimadas
+        ultimoNivel = None
+        for nivel, valor in sorted(etiquetas, reverse=True):
+            if ultimoNivel is None or np.log10(ultimoNivel / nivel) > 0.03:
+                texto = np.format_float_positional(valor, trim="-").replace(".", ",")
+                ax.text(1.08e8, nivel, texto, fontsize=7, va="center")
+                ultimoNivel = nivel
+
+        reynoldsLaminar = np.logspace(np.log10(600), np.log10(2000), 30)
+        ax.plot(reynoldsLaminar, 64 / reynoldsLaminar, color="tab:red", linewidth=2, label="Flujo laminar f = 64/Re")
+        ax.axvspan(2000, 4000, color="gray", alpha=0.25, label="Zona crítica (2000 a 4000)")
+
+        if reynolds >= 4000:
+            factoresPunto = [DisenoTuberiaForzada.friccionColebrook(re, rugosidadRelativa) for re in reynoldsTurbulento]
+            ax.plot(reynoldsTurbulento, factoresPunto, color="tab:orange", linewidth=2.2, label=f"Curva de εr = {rugosidadRelativa:.5f}")
+
+        ax.plot(
+            reynolds, factorFriccion, marker="o", markersize=11, color="tab:red", markeredgecolor="black",
+            linestyle="none", zorder=5,
+            label=f"Punto de operación: Re = {reynolds:,.0f}; f = {factorFriccion:.4f} ({metodo})",
+        )
+
+        ax.set_xscale("log")
+        ax.set_yscale("log")
+        ax.set_xlim(600, 1e8)
+        ax.set_ylim(0.008, 0.1)
+        ax.set_xlabel("Número de Reynolds Re")
+        ax.set_ylabel("Factor de fricción de Darcy f")
+        ax.text(3.2e8, 0.029, "Rugosidad relativa ε/D", rotation=90, fontsize=9, va="center")
+        ax.set_title("Diagrama de Moody")
+        ax.grid(True, which="both", alpha=0.3)
+        ax.legend(loc="lower left", fontsize=9)
+        formatoComa = FuncFormatter(lambda valor, _: f"{valor:g}".replace(".", ","))
+        ax.yaxis.set_major_formatter(formatoComa)
+        ax.yaxis.set_minor_formatter(formatoComa)
+        ax.tick_params(axis="y", which="minor", labelsize=7)
+        return fig
+
+    def crearFiguraConvergencia(self, dfHistorial: pl.DataFrame, tolerancia: float) -> Figure:
+        """Diámetro calculado y error relativo en cada iteración."""
+        fig = Figure(figsize=(10, 6))
+        axDiametro, axError = fig.subplots(2, 1, sharex=True)
+
+        iteraciones = dfHistorial["Iteracion"].to_numpy()
+        axDiametro.plot(iteraciones, dfHistorial["DiametroCalculado_m"].to_numpy(), marker="o", color="tab:green")
+        axDiametro.set_ylabel("Diámetro calculado (m)")
+        axDiametro.set_title("Convergencia del diámetro económico")
+        axDiametro.grid(True, alpha=0.3)
+
+        axError.plot(iteraciones, dfHistorial["ErrorRelativo_pct"].to_numpy(), marker="o", color="tab:purple", label="Error relativo")
+        axError.axhline(tolerancia * 100, color="tab:red", linestyle="--", label=f"Tolerancia ({tolerancia * 100:g} %)")
+        axError.set_yscale("log")
+        axError.yaxis.set_major_formatter(FuncFormatter(lambda valor, _: f"{valor:g}"))
+        axError.yaxis.set_minor_formatter(FuncFormatter(lambda valor, _: f"{valor:g}" if valor in (2, 3, 5, 20, 30, 50) else ""))
+        axError.set_xlabel("Iteración")
+        axError.set_ylabel("Error relativo (%)")
+        axError.set_xticks(iteraciones)
+        axError.grid(True, which="both", alpha=0.3)
+        axError.legend()
         return fig

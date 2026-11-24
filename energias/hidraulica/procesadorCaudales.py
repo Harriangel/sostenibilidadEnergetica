@@ -72,7 +72,9 @@ class ProcesadorCaudales:
             raise ValueError(
                 f"Ningún periodo tiene al menos {self.minDiasPorPeriodo} días con dato."
             )
-        return dfPeriodos.filter(pl.col("Periodo").is_in(periodosValidos))
+        # implode(): la serie se pasa como una sola colección de valores (is_in con una serie
+        # del mismo tipo es ambiguo y está obsoleto en polars)
+        return dfPeriodos.filter(pl.col("Periodo").is_in(periodosValidos.implode()))
 
     def numerarDias(self, df: pl.DataFrame) -> pl.DataFrame:
         """Paso 5: numera los días de 1 a 365 dentro de cada periodo

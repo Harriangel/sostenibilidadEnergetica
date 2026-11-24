@@ -54,6 +54,11 @@ class Unidades:
         return joules / cls.joulesPorWh
 
     @classmethod
+    def joulesAKWh(cls, joules: float) -> float:
+        """J → kWh (1 kWh = 3,6 × 10⁶ J), en una sola división."""
+        return joules / (cls.joulesPorWh * 1000)
+
+    @classmethod
     def whAJoules(cls, vatiosHora: float) -> float:
         """Wh → J (1 Wh = 3600 J)."""
         return vatiosHora * cls.joulesPorWh

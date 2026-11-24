@@ -16,7 +16,7 @@ Los cálculos de cada tecnología se estudian primero en Excel. Luego se convier
 | Tecnología | Estado del estudio | Estado en el aplicativo |
 |---|---|---|
 | Hidráulica (pequeña central) | En estudio | Implementada: caudal de equipamiento, canal de derivación, tubería forzada (v3.0.0; en `energias/hidraulica/` desde la v4.0.0) |
-| Mareomotriz | Estudiada; especificación lista | Siguiente módulo (v4.1.0) |
+| Mareomotriz | Estudiada; especificación lista | Implementada: energía anual y LCOE con escenarios y sensibilidad (v4.1.0, `energias/mar/`) |
 | Solar fotovoltaica | Estudiada | Pendiente |
 | Solar térmica | Estudiada | Pendiente |
 | Solar de concentración | Estudiada | Pendiente |
@@ -78,7 +78,7 @@ Las energías del mar (mareomotriz, corrientes marinas, undimotriz) se agrupan e
 └── tests/                         una prueba por módulo
 ```
 
-Estado en la v4.0.0: la estructura está implementada salvo `energias/comun/economia.py` y `energias/mar/`, que llegan con la mareomotriz (v4.1.0). Convenciones adoptadas al implementarla:
+Estado: la estructura se implementó en la v4.0.0; `energias/comun/economia.py` y `energias/mar/` llegaron con la mareomotriz (v4.1.0). Convenciones adoptadas al implementarla:
 - Script de consola por tecnología: `scripts/ejecutar<Tecnologia>.py` (por ejemplo `ejecutarHidraulica.py`), con los parámetros editables al inicio.
 - Página por tecnología: `interfaz/pages/<n>_<Tecnologia>.py` (por ejemplo `1_Hidraulica.py`); el número fija el orden en la barra lateral.
 - Las claves de `st.session_state` y de los widgets de cada página llevan el prefijo de la tecnología (`hidraulica_`, `mareomotriz_`).

@@ -9,7 +9,8 @@ El proyecto empezó como un aplicativo para el caudal de diseño de una pequeña
 | Tecnología | Módulo | Qué calcula |
 |---|---|---|
 | Hidráulica (pequeña central) | `energias/hidraulica/` | Caudal de equipamiento (Qe) de energía máxima, canal de derivación y diámetro económico de la tubería forzada |
-| Común | `energias/comun/` | Unidades de potencia y energía (W/kW/MW/GW, J↔Wh) y utilidades de gráficas (guardado en png y svg, bytes, formatos de eje) |
+| Mareomotriz | `energias/mar/` | Pasos de agua al año, energía potencial y útil anual, y LCOE por valor presente con escenarios y sensibilidad |
+| Común | `energias/comun/` | Indicadores económicos (valor presente, factor de recuperación de capital, LCOE), unidades de potencia y energía (W/kW/MW/GW, J↔Wh) y utilidades de gráficas (guardado en png y svg, bytes, formatos de eje) |
 
 La hoja de ruta de las demás tecnologías está en `docs/contextoProyecto.md`.
 
@@ -21,8 +22,12 @@ La hoja de ruta de las demás tecnologías está en `docs/contextoProyecto.md`.
 ├── requirements.txt        polars, matplotlib, numpy, streamlit, pytest
 ├── energias/               Paquete de cálculo (no importa Streamlit)
 │   ├── comun/
+│   │   ├── economia.py     IndicadoresEconomicos: valor presente, CRF y LCOE
 │   │   ├── unidades.py     Unidades: factores de potencia y energía, J↔Wh
 │   │   └── graficos.py     Graficos: guardado de figuras, bytes y formatos de eje
+│   ├── mar/
+│   │   ├── mareomotriz.py            CentralMareomotriz: energía anual, LCOE, escenarios y sensibilidad
+│   │   └── graficadorMareomotriz.py  GraficadorMareomotriz (figuras de la mareomotriz)
 │   └── hidraulica/
 │       ├── analisisCaudalDiseno.py   AnalisisCaudalDiseno: clase principal del caudal de equipamiento
 │       ├── lectorDatos.py            LectorDatos
@@ -34,11 +39,13 @@ La hoja de ruta de las demás tecnologías está en `docs/contextoProyecto.md`.
 ├── interfaz/
 │   ├── app.py              Página de inicio
 │   └── pages/
-│       └── 1_Hidraulica.py Hidráulica: caudal de equipamiento, canal y tubería
+│       ├── 1_Hidraulica.py   Hidráulica: caudal de equipamiento, canal y tubería
+│       └── 2_Mareomotriz.py  Mareomotriz: energía anual y LCOE
 ├── scripts/
-│   └── ejecutarHidraulica.py   Ejecución por consola de la hidráulica
+│   ├── ejecutarHidraulica.py    Ejecución por consola de la hidráulica
+│   └── ejecutarMareomotriz.py   Ejecución por consola de la mareomotriz
 ├── data/hidraulica/        descargaDhime.csv (IDEAM), SAACP.csv (CONAGUA)
-├── outputs/hidraulica/     Resultados (se crea al ejecutar; no se versiona)
+├── outputs/<tecnologia>/   Resultados (se crea al ejecutar; no se versiona)
 ├── tests/                  Pruebas pytest (regresión, módulos comunes e interfaz)
 └── docs/                   Contexto del proyecto y especificaciones con sus Excel
 ```
@@ -62,9 +69,10 @@ python -m pip install -e .
 
 ```powershell
 python scripts\ejecutarHidraulica.py
+python scripts\ejecutarMareomotriz.py
 ```
 
-Los parámetros se editan al inicio de `scripts/ejecutarHidraulica.py`. Con los valores por defecto (CONAGUA, H = 150 m, Francis, η total = 0,88) imprime `Energía anual máxima: 1,516,526,226.3 kWh/año con Qe = 238.79 m³/s` y guarda los resultados en `outputs/hidraulica/`.
+Los parámetros se editan al inicio de cada script. **Hidráulica:** Con los valores por defecto (CONAGUA, H = 150 m, Francis, η total = 0,88) imprime `Energía anual máxima: 1,516,526,226.3 kWh/año con Qe = 238.79 m³/s` y guarda los resultados en `outputs/hidraulica/`. **Mareomotriz:** con los valores por defecto (los del Excel de origen) imprime las salidas de la especificación, entre ellas `K21 Energía eléctrica anual kWh/año 22,911,539.81` y `K30 LCOE del caso base EUR/kWh 0.0739476`, y guarda la tabla de escenarios, el barrido de sensibilidad y sus gráficas en `outputs/mareomotriz/`.
 
 ### Interfaz web (Streamlit)
 
@@ -78,17 +86,90 @@ La página **Hidráulica** tiene tres pestañas: **1. Caudal de equipamiento**, 
 
 En la barra lateral se elige la fuente (IDEAM o CONAGUA), el archivo (de la carpeta `data/hidraulica` o subiendo uno) y los parámetros del cálculo; el botón **Calcular** muestra las métricas principales, las gráficas y las tablas. Cada gráfica y tabla tiene su botón de descarga (PNG, SVG o CSV), y el botón **Guardar resultados en la carpeta outputs** exporta todo a `outputs/hidraulica/`, igual que la ejecución por consola.
 
+La página **Mareomotriz** recalcula al cambiar cualquier entrada de la barra lateral (marea, turbina, constantes físicas, economía, número de turbinas, disponibilidad, moneda y unidades). Muestra las métricas principales y cuatro pestañas: tablas de pasos, energía, valor presente y escenarios; gráficas del LCOE por escenario y de sensibilidad; fórmulas; y supuestos del modelo. Tablas y gráficas se descargan en CSV, PNG y SVG.
+
 ### Pruebas
 
 ```powershell
 python -m pytest
 ```
 
-Las pruebas reproducen los resultados de referencia de la hidráulica (`docs/contextoAplicativo.md`, sección 7), prueban los módulos comunes y cargan cada página de la interfaz con `streamlit.testing.v1.AppTest`.
+Las pruebas reproducen los resultados de referencia de la hidráulica (`docs/contextoAplicativo.md`, sección 7) y los valores del Excel de la mareomotriz (tolerancia relativa 1e-9), prueban los módulos comunes y cargan cada página de la interfaz con `streamlit.testing.v1.AppTest`.
 
 ## Salidas
 
 Cada tecnología guarda sus resultados en `outputs/<tecnologia>/`, que se crea al guardar. Los archivos tienen siempre el mismo nombre, así que una nueva ejecución sobrescribe los anteriores. El contenido de `outputs/` no se versiona.
+
+## Módulo mareomotriz
+
+Estima, para una central de una o varias turbinas iguales, la energía eléctrica anual a partir de la energía potencial del agua que pasa por las turbinas en cada ciclo de marea, y el costo nivelado de la energía (LCOE) por valor presente con dos escenarios de sensibilidad. Implementa `docs/especificaciones/mar/Calculo_mareomotriz_LCOE.md` (secciones 3.1 a 3.4), cuyo Excel está en la misma carpeta, y reproduce sus valores con tolerancia relativa 1e-9.
+
+### Uso desde Python
+
+```python
+from energias.mar.mareomotriz import CentralMareomotriz
+
+central = CentralMareomotriz(tipoMarea="Semidiurna", direccion="Bidireccional", numeroTurbinas=1)
+resultados = central.calcular()
+resultados["energiaUtil_kWh"]                 # 22,911,539.81 kWh/año
+resultados["lcoeBase_porKWh"]                 # 0.0739476 EUR/kWh
+resultados["dfEscenarios"]                    # tabla polars de escenarios
+central.barridoSensibilidad("tasaDescuento")  # LCOE frente a la tasa
+```
+
+### Fórmulas
+
+```
+Tciclo      = Tlunar / c              c = 1 (diurna) o 2 (semidiurna)            [h/ciclo]
+ciclos/año  = Tsolar / Tciclo · d                                                [ciclos/año]
+n           = ciclos/año · k          k = 1 (unidireccional) o 2 (bidireccional) [pasos/año por turbina]
+Ep          = n · ½ · m · g · h · Nt                                             [J/año]
+Ep [kWh]    = Ep [J] / 3,6·10⁶
+Eu          = η · D · Ep                                                         [kWh/año]
+FVP         = [1 − (1+r)^(−VU)] / r   (VU si r = 0)        CRF = 1 / FVP
+LCOE        = (CAPEX·Nt + OPEX·Nt·FVP) / (Eu · FVP)                              [moneda/kWh]
+Escenario A: CAPEX × 1,15        Escenario B: Eu × 0,90
+```
+
+### Parámetros (`CentralMareomotriz` y `scripts/ejecutarMareomotriz.py`)
+
+| Parámetro | Descripción | Valor por defecto |
+|---|---|---|
+| `tipoMarea` | `Diurna` o `Semidiurna` (sin distinguir mayúsculas ni tildes) | Semidiurna |
+| `direccion` | `Unidireccional` o `Bidireccional` (sin distinguir mayúsculas ni tildes) | Bidireccional |
+| `tipoTurbina` | Texto descriptivo; no interviene en el cálculo | Eje horizontal |
+| `duracionDiaLunar`, `duracionDiaSolar` | Horas | 24,8 y 24 |
+| `diasAnio` | Días de operación al año | 365 |
+| `masaAgua` | Masa de agua por ciclo y turbina m (kg) | 8,7 × 10⁹ |
+| `gravedad` | g (m/s²) | 9,81 |
+| `desnivel` | Desnivel efectivo medio h (m) | 3,6 |
+| `eficiencia` | Rendimiento global η, en (0, 1] | 0,38 |
+| `vidaUtil` | Vida útil VU (años, > 0) | 25 |
+| `tasaDescuento` | Tasa r (fracción, ≥ 0) | 0,07 |
+| `capex` | Inversión en el año 0 (moneda por turbina) | 14.500.000 |
+| `opex` | Operación y mantenimiento (moneda por turbina y año) | 450.000 |
+| `factorCapexEscenarioA`, `factorEnergiaEscenarioB` | Factores de los escenarios A y B | 1,15 y 0,90 |
+| `numeroTurbinas` | Entero ≥ 1; multiplica energía, CAPEX y OPEX (el LCOE no cambia) | 1 |
+| `disponibilidad` | Fracción del año en operación, en (0, 1]; multiplica la energía útil | 1,0 |
+| `moneda` | Etiqueta de la moneda (no se convierte) | EUR |
+
+Las entradas inválidas (tipo de marea o dirección desconocidos, eficiencia o disponibilidad fuera de (0, 1], masa o desnivel no positivos, vida útil ≤ 0, tasa < 0) lanzan `ValueError`.
+
+### Salidas
+
+- Pasos por turbina: duración del ciclo, ciclos por día y por año, pasos por año.
+- Energía de la central: por paso (J), potencial anual (J y kWh), útil anual (kWh, MWh y GWh) y potencia media (MW).
+- Economía: CAPEX y OPEX totales, FVP, CRF, valor presente del OPEX, de los costos y de la energía, y LCOE de los tres escenarios en moneda/kWh (y el base en moneda/MWh), con su variación frente al caso base.
+- `dfEscenarios`: tabla polars con `Escenario`, `Cambio`, `ValorPresenteCostos_<moneda>`, `ValorPresenteEnergia_kWh`, `LCOE_<moneda>_por_kWh`, `LCOE_<moneda>_por_MWh` y `VariacionFrenteBase_pct`.
+- `barridoSensibilidad(parametro)`: LCOE base frente a la tasa de descuento, la eficiencia, el desnivel o el CAPEX.
+
+En `outputs/mareomotriz/` se guardan `escenariosLcoe.csv`, `sensibilidadLcoe_<parametro>.csv` y las gráficas `lcoeEscenarios` y `sensibilidadLcoe_<parametro>` (png y svg); desde la interfaz también `pasosYEnergia.csv` y `valorPresente.csv`.
+
+### Supuestos y diferencias con el Excel
+
+- Masa, desnivel y rendimiento constantes en todos los ciclos; flujos constantes al final de cada año, sin inflación, impuestos, degradación ni reposición; CAPEX íntegro en el año 0.
+- No se implementan las fórmulas de K31, K36 y K41 del Excel: anualizan el CAPEX solo con la tasa y subestiman el LCOE.
+- Las leyendas del Excel tienen erratas: el LCOE está en moneda/kWh (no €/MWh) y el CAPEX en moneda por turbina (no €/año).
 
 ## Módulo hidráulico
 

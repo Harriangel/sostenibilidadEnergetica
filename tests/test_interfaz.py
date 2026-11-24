@@ -36,3 +36,26 @@ def test_paginaHidraulicaCalcula():
     etiquetas = [metrica.label for metrica in app.metric]
     assert "Diámetro económico D (m)" in etiquetas
     assert "Número de Froude" in etiquetas
+
+
+def test_paginaMareomotrizCalculaConValoresPorDefecto():
+    app = AppTest.from_file(str(carpetaInterfaz / "pages" / "2_Mareomotriz.py"), default_timeout=tiempoMaximo).run()
+    assert not app.exception
+    assert not app.error
+    resultados = app.session_state["mareomotriz_resultados"]
+    assert resultados["lcoeBase_porKWh"] == pytest.approx(0.07394756153502048, rel=1e-9)
+    assert resultados["energiaUtil_kWh"] == pytest.approx(22911539.80645161, rel=1e-9)
+    etiquetas = [metrica.label for metrica in app.metric]
+    assert "LCOE base (EUR/kWh)" in etiquetas
+
+
+def test_paginaMareomotrizCambiaEntradas():
+    app = AppTest.from_file(str(carpetaInterfaz / "pages" / "2_Mareomotriz.py"), default_timeout=tiempoMaximo).run()
+    app.selectbox(key="mareomotriz_direccion").set_value("Unidireccional").run()
+    app.number_input(key="mareomotriz_numeroTurbinas").set_value(3).run()
+    app.selectbox(key="mareomotriz_unidadEnergia").set_value("GWh").run()
+    app.selectbox(key="mareomotriz_parametroSensibilidad").set_value("capex").run()
+    assert not app.exception
+    resultados = app.session_state["mareomotriz_resultados"]
+    assert resultados["energiaUtil_kWh"] == pytest.approx(3 * 22911539.80645161 / 2, rel=1e-9)
+    assert resultados["lcoeBase_porKWh"] == pytest.approx(2 * 0.07394756153502048, rel=1e-9)

@@ -17,7 +17,7 @@ class PaginaInicio:
     # (tecnología, estado en el aplicativo, página de Streamlit o None si aún no existe)
     tecnologias = (
         ("Hidráulica (pequeña central)", "Implementada: caudal de equipamiento, canal de derivación y tubería forzada", "pages/1_Hidraulica.py"),
-        ("Mareomotriz", "Siguiente módulo (v4.1.0)", None),
+        ("Mareomotriz", "Implementada: energía anual por energía potencial y LCOE con escenarios", "pages/2_Mareomotriz.py"),
         ("Solar fotovoltaica", "Pendiente", None),
         ("Solar térmica", "Pendiente", None),
         ("Solar de concentración", "Pendiente", None),

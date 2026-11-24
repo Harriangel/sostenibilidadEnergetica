@@ -1,0 +1,18 @@
+# Entorno virtual y caché de Python
+.venv/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Resultados generados por el aplicativo (se regeneran al ejecutar)
+outputs/*
+!outputs/.gitkeep
+
+# Streamlit y sistema operativo
+.streamlit/secrets.toml
+.DS_Store
+Thumbs.db
+
+# Archivos temporales de Office
+~$*

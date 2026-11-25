@@ -59,3 +59,54 @@ def test_paginaMareomotrizCambiaEntradas():
     resultados = app.session_state["mareomotriz_resultados"]
     assert resultados["energiaUtil_kWh"] == pytest.approx(3 * 22911539.80645161 / 2, rel=1e-9)
     assert resultados["lcoeBase_porKWh"] == pytest.approx(2 * 0.07394756153502048, rel=1e-9)
+
+
+def test_paginaSolarTermicaCalculaConValoresPorDefecto():
+    """TMY de Ciudad de México, inclinación óptima (19°) y Klein: 22,91 m² y 12 colectores."""
+    app = AppTest.from_file(str(carpetaInterfaz / "pages" / "3_SolarTermica.py"), default_timeout=tiempoMaximo).run()
+    assert not app.exception
+    assert not app.error
+    estado = app.session_state["solarTermica_resultados"]
+    assert estado["inclinacion"] == 19
+    dimensionamiento = estado["resultados"]["dimensionamiento"]
+    assert dimensionamiento["numeroColectores"] == 12
+    assert dimensionamiento["area_m2"] == pytest.approx(22.91, abs=0.01)
+    assert "Colectores" in [metrica.label for metrica in app.metric]
+
+
+def test_paginaSolarTermicaCorrelacionInformeEInclinacionManual():
+    app = AppTest.from_file(str(carpetaInterfaz / "pages" / "3_SolarTermica.py"), default_timeout=tiempoMaximo).run()
+    app.selectbox(key="solarTermica_correlacion").set_value("informe").run()
+    app.radio(key="solarTermica_modoInclinacion").set_value("Manual").run()
+    app.slider(key="solarTermica_inclinacion").set_value(43).run()
+    assert not app.exception
+    estado = app.session_state["solarTermica_resultados"]
+    assert estado["inclinacion"] == 43
+    assert estado["sistema"].correlacion == "informe"
+
+
+def test_paginaFotovoltaicaReproduceElExcel():
+    app = AppTest.from_file(str(carpetaInterfaz / "pages" / "4_Fotovoltaica.py"), default_timeout=tiempoMaximo).run()
+    assert not app.exception
+    assert not app.error
+    resultados = app.session_state["fotovoltaica_resultados"]["resultados"]
+    assert resultados["energiaAnual_kWh"] == pytest.approx(7280.46373, rel=1e-9)
+    assert resultados["factorPlanta"] == pytest.approx(0.16622063310502283, rel=1e-9)
+
+
+def test_paginaFotovoltaicaConTmyYMWh():
+    app = AppTest.from_file(str(carpetaInterfaz / "pages" / "4_Fotovoltaica.py"), default_timeout=tiempoMaximo).run()
+    app.radio(key="fotovoltaica_fuente").set_value("tmy").run()
+    app.selectbox(key="fotovoltaica_unidadEnergia").set_value("MWh").run()
+    assert not app.exception
+    resultados = app.session_state["fotovoltaica_resultados"]["resultados"]
+    assert resultados["radiacionAnual_kWhm2"] == pytest.approx(2287.663821134124, rel=1e-9)
+    assert resultados["unidadEnergia"] == "MWh"
+
+
+def test_paginaFotovoltaicaEntradaManual():
+    app = AppTest.from_file(str(carpetaInterfaz / "pages" / "4_Fotovoltaica.py"), default_timeout=tiempoMaximo).run()
+    app.radio(key="fotovoltaica_fuente").set_value("manual").run()
+    assert not app.exception
+    resultados = app.session_state["fotovoltaica_resultados"]["resultados"]
+    assert resultados["energiaAnual_kWh"] == pytest.approx(7280.46373, rel=1e-9)

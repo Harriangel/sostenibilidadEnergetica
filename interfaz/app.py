@@ -18,8 +18,8 @@ class PaginaInicio:
     tecnologias = (
         ("Hidráulica (pequeña central)", "Implementada: caudal de equipamiento, canal de derivación y tubería forzada", "pages/1_Hidraulica.py"),
         ("Mareomotriz", "Implementada: energía anual por energía potencial y LCOE con escenarios", "pages/2_Mareomotriz.py"),
-        ("Solar fotovoltaica", "Pendiente", None),
-        ("Solar térmica", "Pendiente", None),
+        ("Solar térmica", "Implementada: recurso solar (TMY) y ACS por F-Chart; albercas pendiente", "pages/3_SolarTermica.py"),
+        ("Solar fotovoltaica", "Implementada: energía útil por horas solares pico", "pages/4_Fotovoltaica.py"),
         ("Solar de concentración", "Pendiente", None),
         ("Eólica (en tierra)", "Pendiente", None),
         ("Biomasa", "Pendiente", None),

@@ -11,6 +11,25 @@ Las versiones 1.0.0 a 3.0.0 se desarrollaron fuera de Git (octubre y noviembre d
 
 ## [Sin publicar]
 
+## [4.2.0]: energía solar térmica y fotovoltaica
+
+Añade el módulo solar a partir de los scripts y documentos de los cursos de energía solar de la maestría. Hidráulica y mareomotriz sin cambios.
+
+### Añadido
+- **Especificaciones** en `docs/especificaciones/solar/`: recurso solar, F-Chart para ACS y fotovoltaica por horas solares pico, con valores de referencia; alberca y concentrador quedan pendientes de confirmar sus fuentes.
+- **Recurso solar** (`energias/solar/recursoSolar.py`): lector del TMY de NSRDB, posición del sol (Spencer; Duffie y Beckman) a la hora de cada registro, irradiancia en el plano inclinado (modelo isotrópico), barrido e inclinación óptima, radiación diaria y mensual y perfiles horarios. TMY de Ciudad de México en `data/solar/`.
+- **Solar térmica** (`energias/solar/termica/fChartAcs.py`): demanda de ACS, casos de análisis y dimensionamiento por F-Chart con la correlación de Klein y corrección para ACS (por defecto) o la del informe del curso.
+- **Fotovoltaica** (`energias/solar/fotovoltaica/horasSolaresPico.py`): energía útil, rendimiento específico y factor de planta por horas solares pico, con la radiación de NASA POWER o la del plano calculada con el TMY, eficiencia del inversor y unidad de energía.
+- **Gráficas** (`energias/solar/graficadorSolar.py`) con matplotlib, en lugar de las de plotly de los scripts originales.
+- **Consola:** `scripts/ejecutarSolarTermica.py` y `scripts/ejecutarFotovoltaica.py`.
+- **Interfaz:** páginas `3_SolarTermica.py` y `4_Fotovoltaica.py`, con prefijos `solarTermica_` y `fotovoltaica_`.
+- **Pruebas:** `test_recursoSolar.py`, `test_fChartAcs.py`, `test_horasSolaresPico.py`, `test_graficadorSolar.py` y pruebas de humo de las dos páginas.
+
+### Diferencias con los scripts originales
+- El acimut solar se calcula a la hora de cada registro del TMY (hh:30). El script original tomaba el de SunEarthTools a las hh:00; con la corrección, la inclinación óptima de Ciudad de México pasa de 18° a 19° y la radiación anual sube entre 0,3 % y 0,7 %.
+- El F-Chart usa por defecto la correlación de Klein; la exponencial del informe, sin fuente publicada, queda como alternativa.
+- El informe del F-Chart mezcla dos corridas del script (18° y latitud + 23,5°); la especificación documenta cuál es cuál.
+
 ## [4.1.1]: corrección de un aviso de polars
 
 ### Corregido

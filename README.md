@@ -10,6 +10,9 @@ El proyecto empezó como un aplicativo para el caudal de diseño de una pequeña
 |---|---|---|
 | Hidráulica (pequeña central) | `energias/hidraulica/` | Caudal de equipamiento (Qe) de energía máxima, canal de derivación y diámetro económico de la tubería forzada |
 | Mareomotriz | `energias/mar/` | Pasos de agua al año, energía potencial y útil anual, y LCOE por valor presente con escenarios y sensibilidad |
+| Solar (recurso común) | `energias/solar/recursoSolar.py` | Lectura del TMY de NSRDB, posición del sol, irradiancia en un plano inclinado e inclinación óptima |
+| Solar térmica | `energias/solar/termica/` | Demanda de ACS y dimensionamiento de colectores por F-Chart (Klein o la correlación del informe del curso) |
+| Solar fotovoltaica | `energias/solar/fotovoltaica/` | Energía útil, rendimiento específico y factor de planta por horas solares pico |
 | Común | `energias/comun/` | Indicadores económicos (valor presente, factor de recuperación de capital, LCOE), unidades de potencia y energía (W/kW/MW/GW, J↔Wh) y utilidades de gráficas (guardado en png y svg, bytes, formatos de eje) |
 
 La hoja de ruta de las demás tecnologías está en `docs/contextoProyecto.md`.
@@ -28,6 +31,11 @@ La hoja de ruta de las demás tecnologías está en `docs/contextoProyecto.md`.
 │   ├── mar/
 │   │   ├── mareomotriz.py            CentralMareomotriz: energía anual, LCOE, escenarios y sensibilidad
 │   │   └── graficadorMareomotriz.py  GraficadorMareomotriz (figuras de la mareomotriz)
+│   ├── solar/
+│   │   ├── recursoSolar.py           LectorTmy, PosicionSolar y RecursoSolar (irradiancia inclinada)
+│   │   ├── graficadorSolar.py        GraficadorSolar (figuras del módulo solar)
+│   │   ├── termica/fChartAcs.py      SistemaFChart: ACS por F-Chart
+│   │   └── fotovoltaica/horasSolaresPico.py   SistemaFotovoltaicoHsp: horas solares pico
 │   └── hidraulica/
 │       ├── analisisCaudalDiseno.py   AnalisisCaudalDiseno: clase principal del caudal de equipamiento
 │       ├── lectorDatos.py            LectorDatos
@@ -40,11 +48,16 @@ La hoja de ruta de las demás tecnologías está en `docs/contextoProyecto.md`.
 │   ├── app.py              Página de inicio
 │   └── pages/
 │       ├── 1_Hidraulica.py   Hidráulica: caudal de equipamiento, canal y tubería
-│       └── 2_Mareomotriz.py  Mareomotriz: energía anual y LCOE
+│       ├── 2_Mareomotriz.py  Mareomotriz: energía anual y LCOE
+│       ├── 3_SolarTermica.py Solar térmica: recurso solar y ACS por F-Chart
+│       └── 4_Fotovoltaica.py Solar fotovoltaica: horas solares pico
 ├── scripts/
 │   ├── ejecutarHidraulica.py    Ejecución por consola de la hidráulica
-│   └── ejecutarMareomotriz.py   Ejecución por consola de la mareomotriz
+│   ├── ejecutarMareomotriz.py   Ejecución por consola de la mareomotriz
+│   ├── ejecutarSolarTermica.py  Ejecución por consola de la solar térmica
+│   └── ejecutarFotovoltaica.py  Ejecución por consola de la fotovoltaica
 ├── data/hidraulica/        descargaDhime.csv (IDEAM), SAACP.csv (CONAGUA)
+├── data/solar/             tmyCiudadMexico.csv (TMY de NSRDB)
 ├── outputs/<tecnologia>/   Resultados (se crea al ejecutar; no se versiona)
 ├── tests/                  Pruebas pytest (regresión, módulos comunes e interfaz)
 └── docs/                   Contexto del proyecto y especificaciones con sus Excel
@@ -70,9 +83,11 @@ python -m pip install -e .
 ```powershell
 python scripts\ejecutarHidraulica.py
 python scripts\ejecutarMareomotriz.py
+python scripts\ejecutarSolarTermica.py
+python scripts\ejecutarFotovoltaica.py
 ```
 
-Los parámetros se editan al inicio de cada script. **Hidráulica:** Con los valores por defecto (CONAGUA, H = 150 m, Francis, η total = 0,88) imprime `Energía anual máxima: 1,516,526,226.3 kWh/año con Qe = 238.79 m³/s` y guarda los resultados en `outputs/hidraulica/`. **Mareomotriz:** con los valores por defecto (los del Excel de origen) imprime las salidas de la especificación, entre ellas `K21 Energía eléctrica anual kWh/año 22,911,539.81` y `K30 LCOE del caso base EUR/kWh 0.0739476`, y guarda la tabla de escenarios, el barrido de sensibilidad y sus gráficas en `outputs/mareomotriz/`.
+Los parámetros se editan al inicio de cada script. **Hidráulica:** Con los valores por defecto (CONAGUA, H = 150 m, Francis, η total = 0,88) imprime `Energía anual máxima: 1,516,526,226.3 kWh/año con Qe = 238.79 m³/s` y guarda los resultados en `outputs/hidraulica/`. **Mareomotriz:** con los valores por defecto (los del Excel de origen) imprime las salidas de la especificación, entre ellas `K21 Energía eléctrica anual kWh/año 22,911,539.81` y `K30 LCOE del caso base EUR/kWh 0.0739476`, y guarda la tabla de escenarios, el barrido de sensibilidad y sus gráficas en `outputs/mareomotriz/`. **Solar térmica:** con el TMY de Ciudad de México y la inclinación óptima (19°) dimensiona el ACS del hotel con Klein (22,91 m², 12 colectores, F = 0,699). **Fotovoltaica:** con los valores por defecto reproduce el Excel (7.280,46 kWh/año y factor de planta de 16,62 %). Ambos guardan sus resultados en `outputs/solar/`.
 
 ### Interfaz web (Streamlit)
 
@@ -88,17 +103,67 @@ En la barra lateral se elige la fuente (IDEAM o CONAGUA), el archivo (de la carp
 
 La página **Mareomotriz** recalcula al cambiar cualquier entrada de la barra lateral (marea, turbina, constantes físicas, economía, número de turbinas, disponibilidad, moneda y unidades). Muestra las métricas principales y cuatro pestañas: tablas de pasos, energía, valor presente y escenarios; gráficas del LCOE por escenario y de sensibilidad; fórmulas; y supuestos del modelo. Tablas y gráficas se descargan en CSV, PNG y SVG.
 
+La página **Solar térmica** usa un TMY de `data/solar` o uno subido, la inclinación óptima o una manual, la demanda de ACS, el colector y la correlación del F-Chart. Muestra las métricas y cuatro pestañas: recurso solar (barrido de inclinación, radiación mensual, perfiles horarios y radiación diaria), F-Chart (energía mensual, fracción frente al área, casos y demanda), fórmulas y supuestos.
+
+La página **Fotovoltaica** toma la radiación de NASA POWER (caso del Excel), del TMY en el plano inclinado o de 12 valores ingresados, y calcula la energía útil con la potencia, las pérdidas y la eficiencia del inversor.
+
 ### Pruebas
 
 ```powershell
 python -m pytest
 ```
 
-Las pruebas reproducen los resultados de referencia de la hidráulica (`docs/contextoAplicativo.md`, sección 7) y los valores del Excel de la mareomotriz (tolerancia relativa 1e-9), prueban los módulos comunes y cargan cada página de la interfaz con `streamlit.testing.v1.AppTest`.
+Las pruebas reproducen los resultados de referencia de la hidráulica (`docs/contextoAplicativo.md`, sección 7) los valores del Excel de la mareomotriz y de la fotovoltaica, y los del F-Chart y el recurso solar de sus especificaciones (tolerancia relativa 1e-9), prueban los módulos comunes y cargan cada página de la interfaz con `streamlit.testing.v1.AppTest`.
 
 ## Salidas
 
 Cada tecnología guarda sus resultados en `outputs/<tecnologia>/`, que se crea al guardar. Los archivos tienen siempre el mismo nombre, así que una nueva ejecución sobrescribe los anteriores. El contenido de `outputs/` no se versiona.
+
+## Módulo solar
+
+Implementa las especificaciones de `docs/especificaciones/solar/`, construidas con los scripts y documentos de los cursos de energía solar de la maestría. Comparte el recurso solar entre la solar térmica y la fotovoltaica.
+
+### Recurso solar (`energias/solar/recursoSolar.py`)
+
+- **`LectorTmy`:** lee un TMY horario de NSRDB (8760 registros a las hh:30, hora estándar local) y sus metadatos.
+- **`PosicionSolar`:** cenit y acimut del sol (Spencer; Duffie y Beckman) a la hora de cada registro.
+- **`RecursoSolar`:** irradiancia en el plano inclinado con el modelo isotrópico (Gbi, Gdi, Gri y GTI), radiación anual, barrido de inclinación e inclinación óptima, radiación diaria y mensual (`HTdia`, `HTmes`, `Tamb`) y perfiles horarios.
+
+Con el TMY de Ciudad de México (`data/solar/tmyCiudadMexico.csv`) la inclinación óptima es **19°**, con **2.287,66 kWh/m²·año** orientado al sur.
+
+```
+cos θ = cos θz cos β + sen θz sen β cos(γs − γp)
+Gbi = DNI · max(cos θ, 0)     Gdi = DHI · (1 + cos β)/2     Gri = GHI · ρ · (1 − cos β)/2     GTI = Gbi + Gdi + Gri
+```
+
+### Solar térmica: ACS por F-Chart (`energias/solar/termica/fChartAcs.py`)
+
+`SistemaFChart` calcula la demanda de ACS, el área inicial, los parámetros D1 y D2, la fracción solar mensual y anual, los casos representativo, subdimensionado y sobredimensionado, el área de captación que deja la fracción anual en el rango objetivo y el número de colectores.
+
+| Correlación | Uso | Caso del hotel (Tabla 2 del informe) |
+|---|---|---|
+| Klein, Beckman y Duffie con corrección para ACS | Por defecto (`correlacion="klein"`) | 22,99 m², 12 colectores, F = 0,699 |
+| Exponencial del informe del curso | Alternativa (`correlacion="informe"`), reproduce el informe | 17,59 m², 9 colectores, F = 0,700 |
+
+```
+D1 = η0 · HT · Ac / Qm          D2 = a1 · Δt · Ac · ΔT / Qm
+Klein: f = 1,029 D1 − 0,065 D2 − 0,245 D1² + 0,0018 D2² + 0,0215 D1³,  ΔT = 11,6 + 1,18 Tw + 3,86 Tred − 2,32 Tamb
+```
+
+Parámetros principales (por defecto, el hotel del informe): 30 habitaciones, 2 personas por habitación, 50 L/persona·día de 15 a 45 °C, colectores de 2 m² con η0 = 0,75 y a1 = 4,5 W/m²·K, fracción objetivo de 0,6 a 0,7 y eficiencia del sistema 0,45 para el área inicial. El clima mensual se toma de `RecursoSolar.radiacionMensual(inclinacion)`.
+
+### Solar fotovoltaica por horas solares pico (`energias/solar/fotovoltaica/horasSolaresPico.py`)
+
+`SistemaFotovoltaicoHsp` calcula Em = H · días · Pnom · (1 − L) · ηinv, la energía anual, el rendimiento específico, el promedio diario y el factor de planta. Por defecto reproduce la hoja «Energía útil» del Excel del curso (GHI de NASA POWER para Bogotá, 5 kWp y 14 % de pérdidas): **7.280,46 kWh/año**, 1.456,09 kWh/kWp·año y factor de planta de **16,62 %**. Con `desdeRecursoSolar(recurso, inclinacion)` usa la radiación en el plano del panel calculada con el TMY. La eficiencia del inversor (1,0 por defecto) y la unidad de energía (kWh, MWh o GWh) son parámetros.
+
+### Gráficas y salidas
+
+`GraficadorSolar` dibuja el barrido de inclinación, la radiación mensual con la temperatura, los perfiles horarios, la radiación diaria, la energía solar y auxiliar del F-Chart con la fracción mensual, la fracción anual frente al área y la energía fotovoltaica mensual. Los scripts guardan en `outputs/solar/` las tablas (`radiacionMensualPlano.csv`, `barridoInclinacion.csv`, `fChartCasos.csv`, `fChartMensual.csv`, `fotovoltaicaMensual.csv`) y las gráficas en png y svg.
+
+### Pendiente
+
+- Calentamiento de albercas y concentradores: falta confirmar las fuentes de sus constantes (ver `docs/especificaciones/solar/README.md`).
+- Lector de los archivos de PVWatts y LCOE de la fotovoltaica.
 
 ## Módulo mareomotriz
 

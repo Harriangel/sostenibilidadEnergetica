@@ -49,12 +49,15 @@ python -m pip install -r requirements.txt
 python -m pip install -e .                     # paquete energias en modo editable
 python scripts\ejecutarHidraulica.py           # consola: hidráulica (parámetros al inicio del archivo)
 python scripts\ejecutarMareomotriz.py          # consola: mareomotriz (parámetros al inicio del archivo)
+python scripts\ejecutarSolarTermica.py         # consola: recurso solar y ACS por F-Chart
+python scripts\ejecutarFotovoltaica.py         # consola: fotovoltaica por horas solares pico
 python -m streamlit run interfaz\app.py        # interfaz web multipágina
 python -m pytest                               # pruebas
 ```
 
 - El cálculo vive en `energias/<tecnologia>/` y se importa con imports absolutos (`from energias.hidraulica.lectorDatos import LectorDatos`).
 - Cada tecnología tiene un script de consola `scripts/ejecutar<Tecnologia>.py` y una página `interfaz/pages/<n>_<Tecnologia>.py`.
-- En la interfaz, las claves de `st.session_state` y de los widgets llevan el prefijo de la tecnología (`hidraulica_`, `mareomotriz_`).
+- En la interfaz, las claves de `st.session_state` y de los widgets llevan el prefijo de la tecnología (`hidraulica_`, `mareomotriz_`, `solarTermica_`, `fotovoltaica_`).
+- Las tecnologías solares obtienen la radiación de `energias/solar/recursoSolar.py`; no se recalcula la irradiancia inclinada en cada módulo.
 - El LCOE y los valores presentes se calculan con `energias/comun/economia.py` (`IndicadoresEconomicos`); no se reimplementan en cada tecnología.
 - Datos en `data/<tecnologia>/`; salidas en `outputs/<tecnologia>/`, que se crea al guardar.

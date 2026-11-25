@@ -4,9 +4,9 @@ Especificaciones para el módulo `energias/solar/`, construidas a partir de los 
 
 | Especificación | Tecnología | Origen | Estado |
 |---|---|---|---|
-| [`recursoSolar.md`](recursoSolar.md) | Común (térmica, fotovoltaica, concentración) | `GTI_optimized.py`, `GTI_comparison.py`, `graphics.py`; Anexo B del informe F-Chart | Lista |
-| [`termica/fChartAcs.md`](termica/fChartAcs.md) | Solar térmica: ACS | `F-Chart.py`; informe «Dimensionamiento de un sistema solar térmico para un hotel» | Lista |
-| [`fotovoltaica/horasSolaresPico.md`](fotovoltaica/horasSolaresPico.md) | Solar fotovoltaica | `Análisis de radiación diaria.xlsx` | Lista |
+| [`recursoSolar.md`](recursoSolar.md) | Común (térmica, fotovoltaica, concentración) | `GTI_optimized.py`, `GTI_comparison.py`, `graphics.py`; Anexo B del informe F-Chart | Implementada (v4.2.0) |
+| [`termica/fChartAcs.md`](termica/fChartAcs.md) | Solar térmica: ACS | `F-Chart.py`; informe «Dimensionamiento de un sistema solar térmico para un hotel» | Implementada (v4.2.0) |
+| [`fotovoltaica/horasSolaresPico.md`](fotovoltaica/horasSolaresPico.md) | Solar fotovoltaica | `Análisis de radiación diaria.xlsx` | Implementada (v4.2.0), salvo el lector de PVWatts (sección 4.1), que espera los archivos exportados |
 | Calentamiento de albercas | Solar térmica | `dimSisTerAlb.py` | Pendiente: fuente de las constantes (sección 2) |
 | Concentrador | Solar de concentración | `energiaDisponible.py` | Pendiente: alcance (sección 3) |
 

@@ -17,8 +17,8 @@ Los cálculos de cada tecnología se estudian primero en Excel. Luego se convier
 |---|---|---|
 | Hidráulica (pequeña central) | En estudio | Implementada: caudal de equipamiento, canal de derivación, tubería forzada (v3.0.0; en `energias/hidraulica/` desde la v4.0.0) |
 | Mareomotriz | Estudiada; especificación lista | Implementada: energía anual y LCOE con escenarios y sensibilidad (v4.1.0, `energias/mar/`) |
-| Solar fotovoltaica | Estudiada | Pendiente |
-| Solar térmica | Estudiada | Pendiente |
+| Solar fotovoltaica | Estudiada | Implementada: energía útil por horas solares pico (v4.2.0, `energias/solar/fotovoltaica/`) |
+| Solar térmica | Estudiada | Implementada: recurso solar y ACS por F-Chart (v4.2.0, `energias/solar/`); albercas pendiente |
 | Solar de concentración | Estudiada | Pendiente |
 | Eólica (en tierra) | Estudiada | Pendiente |
 | Biomasa | Estudiada | Pendiente |
@@ -60,15 +60,17 @@ Las energías del mar (mareomotriz, corrientes marinas, undimotriz) se agrupan e
 │   ├── contextoProyecto.md        este documento
 │   └── especificaciones/
 │       ├── hidraulica/            Excel de canal y tubería; Excel de Colebrook
-│       └── mar/                   especificación y Excel de la mareomotriz
+│       ├── mar/                   especificación y Excel de la mareomotriz
+│       └── solar/                 recurso solar, F-Chart para ACS y fotovoltaica
 ├── energias/                      paquete de cálculo (sin Streamlit)
 │   ├── comun/
 │   │   ├── economia.py            valor presente, factor de recuperación de capital, LCOE
 │   │   ├── unidades.py            factores W/kW/MW/GW y J↔Wh
 │   │   └── graficos.py            guardado de figuras, conversión a bytes y formatos de eje
 │   ├── hidraulica/                lector, procesador, calculadora, canal, tubería, clase principal
-│   └── mar/
-│       └── mareomotriz.py
+│   ├── mar/
+│   │   └── mareomotriz.py
+│   └── solar/                     recurso solar común, termica/ y fotovoltaica/
 ├── interfaz/
 │   ├── app.py                     página de inicio
 │   └── pages/                     una página por tecnología

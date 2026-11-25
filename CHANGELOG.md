@@ -11,6 +11,9 @@ Las versiones 1.0.0 a 3.0.0 se desarrollaron fuera de Git (octubre y noviembre d
 
 ## [Sin publicar]
 
+### Documentación
+- Especificaciones de energía solar en `docs/especificaciones/solar/`: recurso solar (posición del sol e irradiancia inclinada), F-Chart para ACS (correlación de Klein por defecto y la del informe como alternativa) y fotovoltaica por horas solares pico con comparación frente a PVWatts. Alberca y concentrador, pendientes de confirmar fuentes.
+
 ## [4.1.1]: corrección de un aviso de polars
 
 ### Corregido
